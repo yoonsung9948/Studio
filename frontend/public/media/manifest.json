@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "collection": "dotori studio original storyboard placeholders",
+  "creator": "Created for this dotori studio prototype",
+  "license": "CC0-1.0",
+  "provenance": "Original code-authored SVG compositions bundled with the source. No third-party stock images, social media hotlinks, or AI image/video generations.",
+  "mediaPolicy": "All mock video takes reference still-image animatics, not motion footage. Their 240-frame source span is an 8-second storyboard hold at 30fps.",
+  "assets": [
+    {
+      "file": "arrival.svg",
+      "subject": "Apartment doorway and stylized silhouette"
+    },
+    {
+      "file": "message.svg",
+      "subject": "Recorder on a table beneath a lamp"
+    },
+    {
+      "file": "discovery.svg",
+      "subject": "Hidden necklace behind a loose panel"
+    },
+    {
+      "file": "confrontation.svg",
+      "subject": "Two silhouettes in an apartment"
+    },
+    {
+      "file": "maya.svg",
+      "subject": "Stylized Maya Chen reference placeholder"
+    },
+    {
+      "file": "leo.svg",
+      "subject": "Stylized Leo Hart reference placeholder"
+    },
+    {
+      "file": "studio-look-summer.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-look-formal.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-three_quarter.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-custom.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-front.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-full_body_three_quarter.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-look-winter.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-look-default.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-profile.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-identity-1.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-full_body.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-identity-2.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    },
+    {
+      "file": "studio-identity-3.svg",
+      "subject": "Original labeled character or wardrobe study; simulated placeholder"
+    }
+  ],
+  "sampleVideo": null,
+  "sampleAudio": null,
+  "userUploads": "User-provided media is session-only. Users supply their own permissions. No blobs or object URLs are persisted."
+}

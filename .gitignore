@@ -1,0 +1,54 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.claude
+# ==========================================
+# Root / General
+# ==========================================
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.*.local
+*.log
+*.env*
+
+# ==========================================
+# Frontend: React + Vite + Tailwind CSS
+# ==========================================
+/frontend/node_modules/
+/frontend/dist/
+/frontend/dist-ssr/
+/frontend/.vite/
+.vite
+
+# IDE / Editor specific (Frontend & Backend)
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ==========================================
+# Backend: Go
+# ==========================================
+# Binaries / Executables
+/server/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary files
+*.test
+
+# Output of the go workspace file
+go.work.sum
+
+# Vendor directory
+/server/vendor/
+
+# Go coverage files
+*.out
