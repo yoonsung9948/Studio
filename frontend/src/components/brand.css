@@ -1,0 +1,75 @@
+.dotori-mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  color: var(--accent, #b7d7c7);
+}
+.dotori-wordmark {
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
+}
+.st-rail-header .st-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  letter-spacing: normal;
+  flex-shrink: 0;
+  user-select: none;
+}
+.st-rail-header .st-brand .dotori-mark {
+  width: 30px;
+  height: 30px;
+}
+.navigation-expanded .st-rail-header .st-brand .dotori-wordmark {
+  font-size: 15px;
+}
+.login-brand .dotori-mark {
+  width: 36px;
+  height: 36px;
+  color: #b7d7c7;
+}
+.login-brand > .dotori-wordmark {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+.product-brand .dotori-mark {
+  width: 33px;
+  height: 33px;
+  color: var(--product-ink);
+}
+.product-brand > .dotori-wordmark {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.7px;
+}
+.product-footer .product-brand .dotori-mark {
+  width: 28px;
+  height: 28px;
+}
+.product-footer .product-brand > .dotori-wordmark {
+  font-size: 20px;
+}
+@media (max-width: 650px) {
+  .st-rail-header .st-brand .dotori-mark {
+    width: 28px;
+    height: 28px;
+  }
+  .login-brand > .dotori-wordmark {
+    font-size: 22px;
+  }
+  .product-brand > .dotori-wordmark {
+    font-size: 19px;
+  }
+}
+
+.product-preview-top .dotori-mark {
+  width: 15px;
+  height: 15px;
+  color: var(--product-mint);
+}

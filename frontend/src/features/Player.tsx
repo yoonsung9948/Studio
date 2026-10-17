@@ -16,11 +16,13 @@ export function Player({
   selectedId,
   onSelect,
   onTime,
+  studio = false,
 }: {
   shotIds: string[];
   selectedId?: string;
   onSelect?: (id: string) => void;
   onTime?: (frame: number) => void;
+  studio?: boolean;
 }) {
   const d = useStore((s) => s.data);
   const [index, setIndex] = useState(0);
@@ -36,7 +38,10 @@ export function Player({
   const i =
     selectedIndex >= 0 ? selectedIndex : Math.min(index, shots.length - 1);
   const shot = shots[i];
-  const take = shot?.currentTakeId ? d.takes[shot.currentTakeId] : undefined;
+  const takeId =
+    shot?.currentTakeId ??
+    (studio ? (shot?.candidateTakeId ?? shot?.imageTakeId) : undefined);
+  const take = takeId ? d.takes[takeId] : undefined;
   const asset = take ? d.assets[take.assetId] : undefined;
   const source = asset?.url || (shot ? d.scenes[shot.sceneId].cover : "");
   const frames = shot ? shot.outFrame - shot.inFrame : 150;
@@ -100,7 +105,11 @@ export function Player({
       <div className="preview-stage">
         <div className="preview-label">
           <span className="live-dot" />{" "}
-          {isVideo ? "Fixture video" : "Still-image animatic"}
+          {studio
+            ? `${take?.kind === "video" ? "Video" : take ? "Still" : "Draft"} · Demo`
+            : isVideo
+              ? "Fixture video"
+              : "Still-image animatic"}
         </div>
         <div className="film-frame">
           {isVideo ? (

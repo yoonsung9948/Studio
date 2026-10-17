@@ -12,15 +12,26 @@ import (
 	"nori/studio/server/internal/domain/project"
 	"nori/studio/server/internal/engine"
 	"nori/studio/server/internal/engine/ops/brief"
+	"nori/studio/server/internal/engine/ops/video"
 	"nori/studio/server/internal/httpapi"
+	"nori/studio/server/internal/platform/blob"
 	"nori/studio/server/internal/platform/queue"
 )
 
 // Serve runs the HTTP API and the job workers until ctx is cancelled,
 // then shuts both down gracefully.
 func (a *App) Serve(ctx context.Context) error {
+	files, err := blob.NewLocal(a.cfg.BlobDir)
+	if err != nil {
+		return err
+	}
+	videoModel, err := a.videoModel()
+	if err != nil {
+		return err
+	}
 	registry, err := engine.NewRegistry(
 		brief.NewOperation(brief.Fake{}, brief.FakeProvider, brief.FakeModel),
+		video.NewOperation(videoModel, files, fakeVideoPollEvery),
 	)
 	if err != nil {
 		return err
@@ -49,7 +60,11 @@ func (a *App) Serve(ctx context.Context) error {
 		return fmt.Errorf("start workers (run migrations first): %w", err)
 	}
 	server := &http.Server{
-		Handler:           httpapi.New(project.NewService(a.pool), jobs, a.logger, a.pool.Ping),
+		Handler: httpapi.New(httpapi.Services{
+			Projects: project.NewService(a.pool),
+			Jobs:     jobs,
+			Files:    files,
+		}, a.logger, a.pool.Ping),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second,
 	}
 	serveErr := make(chan error, 1)

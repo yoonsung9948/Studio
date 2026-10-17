@@ -12,11 +12,11 @@ type stubOperation struct {
 	queue   string
 }
 
-func (o stubOperation) Name() string                                         { return o.name }
-func (o stubOperation) InputVersion() int                                    { return o.version }
-func (o stubOperation) Queue() string                                        { return o.queue }
-func (o stubOperation) Provider() (string, string)                           { return "stub", "stub-v1" }
-func (o stubOperation) Run(context.Context, json.RawMessage) (Output, error) { return Output{}, nil }
+func (o stubOperation) Name() string                               { return o.name }
+func (o stubOperation) InputVersion() int                          { return o.version }
+func (o stubOperation) Queue() string                              { return o.queue }
+func (o stubOperation) Provider() (string, string)                 { return "stub", "stub-v1" }
+func (o stubOperation) Step(context.Context, Run) (Outcome, error) { return Done{}, nil }
 func (o stubOperation) Canonicalize(in json.RawMessage) (json.RawMessage, error) {
 	return in, nil
 }

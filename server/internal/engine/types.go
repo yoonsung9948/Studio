@@ -17,7 +17,8 @@ type Job struct {
 	InputSchemaVersion int             `json:"inputSchemaVersion"`
 	Input              json.RawMessage `json:"input"`
 	Status             string          `json:"status"`
-	Result             *Artifact       `json:"result,omitempty"`
+	Step               string          `json:"step,omitempty"` // current step of a multi-step operation
+	Results            []Artifact      `json:"results,omitempty"`
 	Error              *Failure        `json:"error,omitempty"`
 	CreatedAt          time.Time       `json:"createdAt"`
 	UpdatedAt          time.Time       `json:"updatedAt"`

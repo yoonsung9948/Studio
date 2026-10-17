@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -26,10 +27,13 @@ import (
 	"nori/studio/server/internal/domain/project"
 	"nori/studio/server/internal/engine"
 	"nori/studio/server/internal/engine/ops/brief"
+	"nori/studio/server/internal/engine/ops/video"
 	"nori/studio/server/internal/httpapi"
 	"nori/studio/server/internal/platform/apperr"
+	"nori/studio/server/internal/platform/blob"
 	"nori/studio/server/internal/platform/db"
 	"nori/studio/server/internal/platform/queue"
+	"nori/studio/server/internal/providers/fake"
 )
 
 // testQueues serves every production queue with n workers each.
@@ -50,16 +54,16 @@ type fixture struct {
 	registry *engine.Registry
 }
 
-func newRegistry(t *testing.T, adapter brief.Interpreter) *engine.Registry {
+func newRegistry(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *engine.Registry {
 	t.Helper()
-	registry, err := engine.NewRegistry(brief.NewOperation(adapter, brief.FakeProvider, brief.FakeModel))
+	registry, err := engine.NewRegistry(append([]engine.Operation{brief.NewOperation(adapter, brief.FakeProvider, brief.FakeModel)}, extra...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return registry
 }
 
-func setup(t *testing.T, adapter brief.Interpreter) *fixture {
+func setup(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *fixture {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
@@ -98,7 +102,7 @@ func setup(t *testing.T, adapter brief.Interpreter) *fixture {
 	if err := db.Migrate(ctx, pool); err != nil {
 		t.Fatal("repeat migration:", err)
 	}
-	registry := newRegistry(t, adapter)
+	registry := newRegistry(t, adapter, extra...)
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &engine.Worker{Pool: pool, Registry: registry})
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
@@ -128,11 +132,16 @@ func (f *fixture) start(t *testing.T) {
 
 func submit(t *testing.T, f *fixture, key string) engine.Job {
 	t.Helper()
+	return submitOperation(t, f, key, brief.Name, `{"prompt":"A woman discovers a letter in a café."}`)
+}
+
+func submitOperation(t *testing.T, f *fixture, key, operation, input string) engine.Job {
+	t.Helper()
 	proj, err := f.projects.Create(context.Background(), "Test film")
 	if err != nil {
 		t.Fatal(err)
 	}
-	job, err := f.service.Submit(context.Background(), proj.ID, key, engine.Submission{Operation: brief.Name, Input: json.RawMessage(`{"prompt":"A woman discovers a letter in a café."}`)})
+	job, err := f.service.Submit(context.Background(), proj.ID, key, engine.Submission{Operation: operation, Input: json.RawMessage(input)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +171,7 @@ func await(t *testing.T, f *fixture, id, status string) engine.JobDetail {
 func TestHTTPWorkflow(t *testing.T) {
 	f := setup(t, brief.Fake{})
 	f.start(t)
-	server := httptest.NewServer(httpapi.New(f.projects, f.service, slog.Default(), f.pool.Ping))
+	server := httptest.NewServer(httpapi.New(httpapi.Services{Projects: f.projects, Jobs: f.service}, slog.Default(), f.pool.Ping))
 	defer server.Close()
 	post := func(path, body, key string) (int, []byte) {
 		t.Helper()
@@ -196,7 +205,7 @@ func TestHTTPWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 	done := await(t, f, job.ID, "succeeded")
-	if done.Result == nil || done.Result.Kind != "creative_brief" || !bytes.Contains(done.Result.Content, []byte("A café discovery.")) {
+	if len(done.Results) != 1 || done.Results[0].Kind != "creative_brief" || !bytes.Contains(done.Results[0].Content, []byte("A café discovery.")) {
 		t.Fatalf("bad result: %+v", done)
 	}
 	if len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" {
@@ -293,7 +302,7 @@ func TestInvalidProviderOutput(t *testing.T) {
 	job := submit(t, f, "invalid")
 	f.start(t)
 	done := await(t, f, job.ID, "failed")
-	if done.Result != nil || done.Error == nil || done.Error.Code != "invalid_output" {
+	if len(done.Results) != 0 || done.Error == nil || done.Error.Code != "invalid_output" {
 		t.Fatalf("bad failure: %+v", done)
 	}
 }
@@ -447,5 +456,134 @@ func TestReconcileExhaustedCrash(t *testing.T) {
 	var persisted string
 	if err := f.pool.QueryRow(context.Background(), `SELECT status FROM generation_jobs WHERE id=$1`, job.ID).Scan(&persisted); err != nil || persisted != "failed" {
 		t.Fatalf("status=%s err=%v", persisted, err)
+	}
+}
+
+// pipeline is a multi-step test operation: it starts on the llm queue, moves to
+// render, polls twice with Wait, then publishes two artifacts.
+type pipeline struct {
+	firstSteps atomic.Int32
+	failOnce   atomic.Bool // fail the final render step once, retryably
+}
+
+func (p *pipeline) Name() string                                             { return "test_pipeline" }
+func (p *pipeline) InputVersion() int                                        { return 1 }
+func (p *pipeline) Queue() string                                            { return queue.LLM }
+func (p *pipeline) Provider() (string, string)                               { return "test", "test-v1" }
+func (p *pipeline) Canonicalize(in json.RawMessage) (json.RawMessage, error) { return in, nil }
+
+func (p *pipeline) Step(_ context.Context, run engine.Run) (engine.Outcome, error) {
+	switch run.Step {
+	case "":
+		p.firstSteps.Add(1)
+		return engine.Next{Step: "render", Queue: queue.Render, State: json.RawMessage(`{"polls":0}`)}, nil
+	case "render":
+		var state struct {
+			Polls int `json:"polls"`
+		}
+		if err := json.Unmarshal(run.State, &state); err != nil {
+			return nil, err
+		}
+		if state.Polls < 2 {
+			return engine.Wait{State: json.RawMessage(fmt.Sprintf(`{"polls":%d}`, state.Polls+1))}, nil
+		}
+		if p.failOnce.CompareAndSwap(true, false) {
+			return nil, &engine.RunError{Code: "provider_error", Message: "temporary", Retryable: true}
+		}
+		return engine.Done{Artifacts: []engine.ArtifactDraft{
+			{Kind: "frame", SchemaVersion: 1, Content: json.RawMessage(`{"n":1}`)},
+			{Kind: "frame", SchemaVersion: 1, Content: json.RawMessage(`{"n":2}`)},
+		}}, nil
+	}
+	return nil, &engine.RunError{Code: "unknown_step", Message: run.Step}
+}
+
+func TestMultiStepOperation(t *testing.T) {
+	op := &pipeline{}
+	f := setup(t, brief.Fake{}, op)
+	f.start(t)
+	job := submitOperation(t, f, "pipeline", op.Name(), `{}`)
+	done := await(t, f, job.ID, "succeeded")
+	var order []int
+	for _, r := range done.Results {
+		var content struct{ N int }
+		if err := json.Unmarshal(r.Content, &content); err != nil {
+			t.Fatal(err)
+		}
+		order = append(order, content.N)
+	}
+	if fmt.Sprint(order) != "[1 2]" {
+		t.Fatalf("results out of order: %+v", done.Results)
+	}
+	if done.Step != "render" || len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" || op.firstSteps.Load() != 1 {
+		t.Fatalf("step=%q attempts=%+v first steps=%d", done.Step, done.Attempts, op.firstSteps.Load())
+	}
+	rows, err := f.pool.Query(context.Background(), `SELECT queue,state::text FROM river_job ORDER BY id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type riverRow struct{ Queue, State string }
+	got, err := pgx.CollectRows(rows, pgx.RowToStructByPos[riverRow])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []riverRow{{queue.LLM, "completed"}, {queue.Render, "completed"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("river jobs: %+v, want %+v", got, want)
+	}
+}
+
+func TestRetryResumesFromCheckpoint(t *testing.T) {
+	op := &pipeline{}
+	op.failOnce.Store(true)
+	f := setup(t, brief.Fake{}, op)
+	f.start(t)
+	job := submitOperation(t, f, "resume", op.Name(), `{}`)
+	done := await(t, f, job.ID, "succeeded")
+	if len(done.Attempts) != 2 || done.Attempts[0].Status != "failed" || done.Attempts[1].Status != "succeeded" {
+		t.Fatalf("attempts: %+v", done.Attempts)
+	}
+	if op.firstSteps.Load() != 1 {
+		t.Fatalf("first step ran %d times; the retry should resume at render", op.firstSteps.Load())
+	}
+	if len(done.Results) != 2 {
+		t.Fatalf("results: %+v", done.Results)
+	}
+}
+
+func TestGenerateVideo(t *testing.T) {
+	store, err := blob.NewLocal(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	op := video.NewOperation(&fake.Video{Delay: 100 * time.Millisecond, Sample: []byte("clip")}, store, 20*time.Millisecond)
+	f := setup(t, brief.Fake{}, op)
+	f.start(t)
+	job := submitOperation(t, f, "video", video.Name, `{"prompt":"three small dogs dancing on a beach","durationSeconds":6}`)
+	done := await(t, f, job.ID, "succeeded")
+	if len(done.Results) != 1 || done.Results[0].Kind != "video" {
+		t.Fatalf("results: %+v", done.Results)
+	}
+	var result video.Result
+	if err := json.Unmarshal(done.Results[0].Content, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.FileKey != "jobs/"+job.ID+"/video.mp4" || result.Resolution != "768P" || result.DurationSeconds != 6 {
+		t.Fatalf("result: %+v", result)
+	}
+	file, err := store.Open(context.Background(), result.FileKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	if data, _ := io.ReadAll(file); string(data) != "clip" {
+		t.Fatalf("stored %q", data)
+	}
+	if len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" || done.Attempts[0].Provider != "fake_minimax" {
+		t.Fatalf("attempts: %+v", done.Attempts)
+	}
+	var queueName string
+	if err := f.pool.QueryRow(context.Background(), `SELECT queue FROM river_job`).Scan(&queueName); err != nil || queueName != queue.Video {
+		t.Fatalf("queue %q, err=%v", queueName, err)
 	}
 }

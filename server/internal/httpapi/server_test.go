@@ -35,7 +35,7 @@ func (s *stubBackend) Get(context.Context, string) (engine.JobDetail, error) {
 }
 
 func newAPI(backend *stubBackend, logger *slog.Logger, ready func(context.Context) error) http.Handler {
-	return New(backend, backend, logger, ready)
+	return New(Services{Projects: backend, Jobs: backend}, logger, ready)
 }
 
 func TestRequestValidation(t *testing.T) {

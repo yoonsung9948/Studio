@@ -1,3 +1,4 @@
+import { BrandMark, BrandWordmark } from "../../components/Brand";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -5,7 +6,6 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  Clapperboard,
   Layers3,
   Sparkles,
 } from "lucide-react";
@@ -34,11 +34,8 @@ const scenes = [
 function Brand() {
   return (
     <Link to="/" className="product-brand" aria-label="dotori studio home">
-      <img src="/favicon.svg" alt="" />
-      <span>
-        dotori<span>.</span>
-        <small>studio</small>
-      </span>
+      <BrandMark decorative />
+      <BrandWordmark />
     </Link>
   );
 }
@@ -97,7 +94,7 @@ export function ProductPage() {
           >
             <div className="product-preview-top">
               <span>
-                <Clapperboard size={13} />
+                <BrandMark decorative />
                 dotori studio
               </span>
               <span>INTERACTIVE PREVIEW</span>

@@ -104,8 +104,26 @@ export function generationInputSnapshot(
 ): GenerationInputSnapshot {
   const shot = d.shots[shotId],
     inputs = generationInputs(d, shot.sceneId, shotId);
+  const episode = d.episodes[d.scenes[shot.sceneId].episodeId];
   return structuredClone({
     ...inputs,
+    sourceScript: episode.script,
+    sceneDescription: d.scenes[shot.sceneId].description,
+    episodeStyle: episode.style,
+    camera: { framing: shot.framing, movement: shot.movement },
+    worldElements: [
+      ...(d.projects[episode.projectId].worldElements ?? []),
+      ...(d.projects[episode.projectId].bible?.trim()
+        ? [
+            {
+              id: `bible-${episode.projectId}`,
+              kind: "note" as const,
+              name: "Story notes",
+              description: d.projects[episode.projectId].bible,
+            },
+          ]
+        : []),
+    ].filter((e) => shot.worldElementIds?.includes(e.id)),
     scriptRevision:
       d.episodes[d.scenes[shot.sceneId].episodeId].scriptRevision ?? 1,
     planRevision: d.scenes[shot.sceneId].planRevision ?? 1,

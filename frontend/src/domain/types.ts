@@ -33,6 +33,17 @@ export interface GenerationPreferences {
   aspectRatio: "9:16" | "16:9" | "1:1";
 }
 export interface GenerationInputSnapshot extends GenerationPreferences {
+  sourceScript?: string;
+  sceneDescription?: string;
+  episodeStyle?: string;
+  camera?: { framing?: string; movement?: string };
+  worldElements?: {
+    id: string;
+    kind: "prop" | "note";
+    name: string;
+    description: string;
+    assetId?: string;
+  }[];
   scriptRevision?: number;
   planRevision?: number;
   locationMode: SceneSetup["locationMode"];
@@ -114,6 +125,15 @@ export interface ReferenceSnapshot {
 export type JobState =
   "queued" | "waiting" | "running" | "succeeded" | "failed" | "canceled";
 export interface Project {
+  unfiled?: boolean;
+  strictApprovals?: boolean;
+  worldElements?: {
+    id: string;
+    kind: "prop" | "note";
+    name: string;
+    description: string;
+    assetId?: string;
+  }[];
   id: ID;
   title: string;
   description: string;
@@ -143,6 +163,9 @@ export interface PlanApproval {
   approvedAt: number;
 }
 export interface Episode {
+  creationKind?: "episode" | "scene" | "shot";
+  archived?: boolean;
+  style?: string;
   id: ID;
   projectId: ID;
   title: string;
@@ -172,6 +195,10 @@ export interface Scene {
   cover: string;
 }
 export interface Shot {
+  discardedTakeIds?: string[];
+  locked?: boolean;
+  movement?: string;
+  worldElementIds?: string[];
   id: ID;
   sceneId: ID;
   title: string;
@@ -210,6 +237,7 @@ export interface Take {
   inputs?: GenerationInputSnapshot;
 }
 export interface Asset {
+  archived?: boolean;
   id: ID;
   projectId: ID;
   title: string;
@@ -322,6 +350,8 @@ export interface Data {
   studio: StudioData;
 }
 export interface UI {
+  density?: "comfortable" | "compact";
+  inspectorAdvanced?: boolean;
   theme: "dark" | "light";
   collapsed: boolean;
   aiOpen: boolean;

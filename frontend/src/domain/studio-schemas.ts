@@ -61,6 +61,23 @@ export const generationOverrideSchema = generationPreferencesSchema.extend({
   locationId: id.optional(),
 });
 export const generationInputSchema = generationOverrideSchema.extend({
+  sourceScript: z.string().optional(),
+  sceneDescription: z.string().optional(),
+  episodeStyle: z.string().optional(),
+  camera: z
+    .object({ framing: z.string().optional(), movement: z.string().optional() })
+    .optional(),
+  worldElements: z
+    .array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(["prop", "note"]),
+        name: z.string(),
+        description: z.string(),
+        assetId: z.string().optional(),
+      }),
+    )
+    .optional(),
   scriptRevision: z.number().int().positive().optional(),
   planRevision: z.number().int().positive().optional(),
   locationAssetId: id.optional(),

@@ -67,6 +67,7 @@ type Editable = Pick<
   | "proposals"
   | "characters"
   | "studio"
+  | "assets"
 >;
 const editable = (d: Data): Editable =>
   structuredClone({
@@ -77,6 +78,7 @@ const editable = (d: Data): Editable =>
     proposals: d.proposals,
     characters: d.characters,
     studio: d.studio,
+    assets: d.assets,
   });
 interface History {
   before: Editable;

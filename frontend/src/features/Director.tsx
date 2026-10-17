@@ -24,6 +24,7 @@ export function Director({
   lookId,
   characterTab,
   setup,
+  onGenerate,
 }: {
   projectId: string;
   episodeId?: string;
@@ -32,6 +33,11 @@ export function Director({
   lookId?: string;
   characterTab?: "identity" | "looks" | "references";
   setup?: boolean;
+  onGenerate?: (
+    ids: string[],
+    replacement: boolean,
+    proposalId: string,
+  ) => void;
 }) {
   const d = useStore((s) => s.data),
     ui = useStore((s) => s.ui),
@@ -258,14 +264,22 @@ export function Director({
                               if (
                                 p.intent === "generate" ||
                                 p.intent === "replace"
-                              )
+                              ) {
+                                if (onGenerate) {
+                                  onGenerate(
+                                    p.shotIds,
+                                    p.intent === "replace",
+                                    p.id,
+                                  );
+                                  return;
+                                }
                                 modal({
                                   kind: "generate",
                                   ids: p.shotIds,
                                   replacement: p.intent === "replace",
                                   proposalId: p.id,
                                 });
-                              else
+                              } else
                                 mutate((d) => applyEditProposal(d, p.id), true);
                             }}
                           >

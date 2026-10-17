@@ -80,7 +80,7 @@ func (s *JobService) Submit(ctx context.Context, projectID, key string, req Subm
 		return Job{}, err
 	}
 	id := uuid.NewString()
-	queued, err := s.queue.InsertTx(ctx, tx, JobArgs{JobID: id}, &river.InsertOpts{Queue: op.Queue(), MaxAttempts: 3})
+	queued, err := s.queue.InsertTx(ctx, tx, JobArgs{JobID: id}, &river.InsertOpts{Queue: op.Queue(), MaxAttempts: maxAttempts})
 	if err != nil {
 		return Job{}, fmt.Errorf("enqueue job: %w", err)
 	}
@@ -101,7 +101,7 @@ func (s *JobService) Get(ctx context.Context, id string) (JobDetail, error) {
 	d := JobDetail{Attempts: []Attempt{}}
 	var code, message *string
 	var queueState *string
-	err = tx.QueryRow(ctx, `SELECT j.id::text,j.project_id::text,j.operation,j.input_schema_version,j.input_json,j.status,j.error_code,j.error_message,j.created_at,j.updated_at,r.state::text FROM generation_jobs j LEFT JOIN river_job r ON r.id=j.river_job_id WHERE j.id=$1`, id).Scan(&d.ID, &d.ProjectID, &d.Operation, &d.InputSchemaVersion, &d.Input, &d.Status, &code, &message, &d.CreatedAt, &d.UpdatedAt, &queueState)
+	err = tx.QueryRow(ctx, `SELECT j.id::text,j.project_id::text,j.operation,j.input_schema_version,j.input_json,j.status,j.step,j.error_code,j.error_message,j.created_at,j.updated_at,r.state::text FROM generation_jobs j LEFT JOIN river_job r ON r.id=j.river_job_id WHERE j.id=$1`, id).Scan(&d.ID, &d.ProjectID, &d.Operation, &d.InputSchemaVersion, &d.Input, &d.Status, &d.Step, &code, &message, &d.CreatedAt, &d.UpdatedAt, &queueState)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return JobDetail{}, apperr.ErrNotFound
 	}
@@ -116,11 +116,16 @@ func (s *JobService) Get(ctx context.Context, id string) (JobDetail, error) {
 		d.Status = "failed"
 		d.Error = &Failure{Code: "execution_stopped", Message: "Job execution stopped before a result was saved."}
 	}
-	a := Artifact{}
-	err = tx.QueryRow(ctx, `SELECT id::text,kind,schema_version,content_json,created_at FROM artifacts WHERE producer_job_id=$1`, id).Scan(&a.ID, &a.Kind, &a.SchemaVersion, &a.Content, &a.CreatedAt)
-	if err == nil {
-		d.Result = &a
-	} else if !errors.Is(err, pgx.ErrNoRows) {
+	artifacts, err := tx.Query(ctx, `SELECT id::text,kind,schema_version,content_json,created_at FROM artifacts WHERE producer_job_id=$1 ORDER BY position`, id)
+	if err != nil {
+		return JobDetail{}, err
+	}
+	d.Results, err = pgx.CollectRows(artifacts, func(row pgx.CollectableRow) (Artifact, error) {
+		var a Artifact
+		err := row.Scan(&a.ID, &a.Kind, &a.SchemaVersion, &a.Content, &a.CreatedAt)
+		return a, err
+	})
+	if err != nil {
 		return JobDetail{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT number,provider,model,status,error_code,error_message,started_at,finished_at FROM job_attempts WHERE job_id=$1 ORDER BY number`, id)

@@ -1,3 +1,4 @@
+import { BrandMark, BrandWordmark } from "../../components/Brand";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { Apple, ArrowRight, Eye, EyeOff, Film, Sparkles } from "lucide-react";
@@ -58,11 +59,8 @@ export function LoginPage() {
     <main className="login-page">
       <section className="login-story" aria-label="Welcome to dotori studio">
         <Link to="/" className="login-brand" aria-label="dotori studio home">
-          <img src="/favicon.svg" alt="" />
-          <span>
-            dotori<span>.</span>
-            <small>studio</small>
-          </span>
+          <BrandMark decorative />
+          <BrandWordmark />
         </Link>
         <div className="login-story-copy">
           <span className="eyebrow">A LITTLE IDEA. A WHOLE NEW WORLD.</span>

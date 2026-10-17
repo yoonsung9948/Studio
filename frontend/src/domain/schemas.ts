@@ -17,6 +17,19 @@ export const episodeForm = z.object({
 const id = z.string();
 const map = <T extends z.ZodType>(v: T) => z.record(id, v);
 const project = z.object({
+  unfiled: z.boolean().optional(),
+  strictApprovals: z.boolean().optional(),
+  worldElements: z
+    .array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(["prop", "note"]),
+        assetId: z.string().optional(),
+        name: z.string(),
+        description: z.string(),
+      }),
+    )
+    .optional(),
   id,
   title: id,
   description: id,
@@ -28,6 +41,9 @@ const project = z.object({
   updatedAt: z.number().optional(),
 });
 const episode = z.object({
+  creationKind: z.enum(["episode", "scene", "shot"]).optional(),
+  archived: z.boolean().optional(),
+  style: z.string().optional(),
   id,
   projectId: id,
   title: id,
@@ -79,6 +95,10 @@ const scene = z.object({
   cover: id,
 });
 const shot = z.object({
+  discardedTakeIds: z.array(z.string()).optional(),
+  locked: z.boolean().optional(),
+  movement: z.string().optional(),
+  worldElementIds: z.array(z.string()).optional(),
   id,
   sceneId: id,
   title: id,
@@ -114,6 +134,7 @@ const take = z.object({
   inputs: generationInputSchema.optional(),
 });
 const asset = z.object({
+  archived: z.boolean().optional(),
   id,
   projectId: id,
   title: id,
@@ -263,6 +284,8 @@ export const dataSchema = z.object({
   studio: studioSchema,
 });
 export const uiSchema = z.object({
+  density: z.enum(["comfortable", "compact"]).optional(),
+  inspectorAdvanced: z.boolean().optional(),
   theme: z.enum(["dark", "light"]),
   collapsed: z.boolean(),
   aiOpen: z.boolean(),

@@ -32,9 +32,11 @@ func (f failing) Interpret(context.Context, Input) (Brief, error) { return Brief
 
 func TestRunReportsArtifactAndFailures(t *testing.T) {
 	input := json.RawMessage(`{"prompt":"story"}`)
-	out, err := NewOperation(Fake{}, "p", "m").Run(context.Background(), input)
-	if err != nil || out.Provider != "p" || out.Model != "m" || out.Artifact.Kind != "creative_brief" || out.Artifact.SchemaVersion != 1 {
-		t.Fatalf("got %+v %v", out, err)
+	outcome, err := NewOperation(Fake{}, "p", "m").Step(context.Background(), engine.Run{Input: input})
+	done, ok := outcome.(engine.Done)
+	if err != nil || !ok || done.Provider != "p" || done.Model != "m" || len(done.Artifacts) != 1 ||
+		done.Artifacts[0].Kind != "creative_brief" || done.Artifacts[0].SchemaVersion != 1 {
+		t.Fatalf("got %+v %v", outcome, err)
 	}
 	for _, tc := range []struct {
 		interpreter Interpreter
@@ -44,7 +46,7 @@ func TestRunReportsArtifactAndFailures(t *testing.T) {
 		{failing{errors.New("down")}, "provider_error", true},
 		{failing{nil}, "invalid_output", false},
 	} {
-		_, err := NewOperation(tc.interpreter, "p", "m").Run(context.Background(), input)
+		_, err := NewOperation(tc.interpreter, "p", "m").Step(context.Background(), engine.Run{Input: input})
 		var runErr *engine.RunError
 		if !errors.As(err, &runErr) || runErr.Code != tc.code || runErr.Retryable != tc.retryable {
 			t.Errorf("got %v, want %s", err, tc.code)
