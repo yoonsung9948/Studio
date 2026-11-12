@@ -1,10 +1,41 @@
+import { episodeProgress } from "./production/production-data";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "../components/ui/dropdown-menu";
+import { ProductionOverview } from "./ProductionOverview";
+import { LocalProjectsHome } from "./projects-home/ProjectsHome";
+import {
+  CreationKindPicker,
+  type CreationKind,
+} from "./director-desk/CreationKind";
+import { HomeWelcome } from "./director-desk/HomeWelcome";
+import { useOwnedData } from "../services/server-data";
+import { ServerHome } from "./ServerHome";
+import { ServerProjects } from "./ServerProjects";
+import { readAppConfiguration } from "../config";
+import { homeUsesDemo } from "../config/environment";
+import { FloatingPromptForm } from "./FloatingPromptForm";
+import { HomeCardRow } from "./HomeCardRow";
+import { HomeInterpretationReply } from "./InterpretationHome";
+import { submitHomeRequest, createDemoHomeDraft } from "../services/home";
+import { interpretationWorkflow } from "../services/interpretation";
+import { interpretationPending } from "../domain/interpretation";
 import { SelectionSurface } from "./SelectionSurface";
-import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Plus,
+  ArrowRight,
   ArrowUpRight,
-  ArrowUp,
+  MoreHorizontal,
   Folder,
   Film,
   Clapperboard,
@@ -20,28 +51,46 @@ import {
   useCommands,
 } from "./commands";
 import {
-  createHomeDraft,
   shotStatus,
   createWorkspaceProject,
   shotAsset,
   shotsOfEpisode,
   archiveWorkspaceEpisodes,
-  renameWorkspaceProject,
 } from "../domain/workspace";
 import { duplicateEpisode } from "../domain/commands";
 export function HomeWorkspace() {
+  return useOwnedData() ? <ServerHome /> : <LocalProjectsHome />;
+}
+export function WorkBrowser() {
   const d = useStore((s) => s.data),
     navigate = useNavigate();
-  const [idea, setIdea] = useState(""),
-    [pid, setPid] = useState(""),
-    [seconds, setSeconds] = useState(30);
-  const [kind, setKind] = useState<"episode" | "scene" | "shot">("episode");
+  const [idea, setIdea] = useState("");
+  const [creationKind, setCreationKind] = useState<CreationKind>("episode");
   const [workType, setWorkType] = useState<"shots" | "scenes">("shots"),
     [scope, setScope] = useState("all");
-  const projects = Object.values(d.projects).filter((p) => !p.unfiled);
-  const episodes = Object.values(d.episodes).filter((e) => !e.archived);
+  const [params] = useSearchParams();
+  const demo = homeUsesDemo(readAppConfiguration(), params.toString());
+  const request = d.backend?.request;
+  const busy = !demo && interpretationPending(request);
+  const [replyOpen, setReplyOpen] = useState(true);
+  const [validation, setValidation] = useState("");
+  useEffect(() => {
+    if (!demo) return interpretationWorkflow.observePage();
+  }, [demo]);
+  useEffect(() => {
+    const show = () => setReplyOpen(true);
+    window.addEventListener("dotori-home-show-reply", show);
+    return () => window.removeEventListener("dotori-home-show-reply", show);
+  }, []);
+  const projects = Object.values(d.projects).filter(
+    (p) => !p.unfiled && !p.archived,
+  );
+  const episodes = Object.values(d.episodes).filter(
+    (e) => !e.archived && !d.projects[e.projectId].archived,
+  );
   const scenes = Object.values(d.scenes).filter(
     (s) =>
+      !s.archived &&
       episodes.some((e) => e.id === s.episodeId) &&
       (scope === "all" ||
         (scope === "unfiled"
@@ -73,29 +122,168 @@ export function HomeWorkspace() {
     const shot = d.shots[id],
       ep = d.episodes[d.scenes[shot.sceneId].episodeId];
     useStudio.getState().set({ inspector: true });
-    navigate(`/projects/${ep.projectId}/episodes/${ep.id}?shot=${id}`);
+    navigate(
+      `/projects/${ep.projectId}/episodes/${ep.id}/shots/${id}?stage=${shot.currentTakeId ? "review" : "frame"}`,
+    );
   };
   const create = () => {
     if (!idea.trim()) {
       document.getElementById("story-idea")?.focus();
       return;
     }
-    let result: ReturnType<typeof createHomeDraft> | undefined;
-    if (
-      commit(
-        (data) => {
-          result = createHomeDraft(data, idea, kind, pid || undefined, seconds);
-        },
-        `${kind[0].toUpperCase() + kind.slice(1)} draft created · 0 credits spent`,
-      ) &&
-      result
-    ) {
-      useStudio.getState().set({ inspector: kind !== "episode" });
+    if (busy) return;
+    setValidation("");
+    if (!demo) {
+      setReplyOpen(true);
+      void submitHomeRequest({ prompt: idea, creationKind }).catch((error) =>
+        setValidation(
+          error instanceof Error
+            ? error.message
+            : "Check your prompt and try again.",
+        ),
+      );
+      return;
+    }
+    const result = createDemoHomeDraft({ prompt: idea, creationKind });
+    if (result) {
+      useStudio.getState().set({ inspector: false });
       navigate(
-        `/projects/${result.projectId}/episodes/${result.episodeId}${kind === "shot" ? `?shot=${result.shotId}` : kind === "scene" ? `?scene=${result.sceneId}` : ""}`,
+        creationKind !== "episode" && result.shotId
+          ? `/projects/${result.projectId}/episodes/${result.episodeId}/shots/${result.shotId}?stage=scene`
+          : `/projects/${result.projectId}/episodes/${result.episodeId}`,
       );
     }
   };
+  const workCards =
+    workType === "shots"
+      ? [...shots].reverse().map((shot) => {
+          const ep = d.episodes[d.scenes[shot.sceneId].episodeId],
+            p = d.projects[ep.projectId],
+            asset = shotAsset(d, shot);
+          return (
+            <CommandMenu
+              key={shot.id}
+              ids={[]}
+              onSelect={() => {
+                if (!keys.includes(`shot:${shot.id}`))
+                  useSelection.getState().replace([`shot:${shot.id}`]);
+              }}
+            >
+              <article
+                className={`st-home-work-card ${keys.includes(`shot:${shot.id}`) ? "is-selected" : ""}`}
+                data-selection-key={`shot:${shot.id}`}
+                key={shot.id}
+                tabIndex={0}
+                onClick={(e) =>
+                  selectWork(`shot:${shot.id}`, e, () => openShot(shot.id))
+                }
+                onDoubleClick={() => openShot(shot.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") openShot(shot.id);
+                  if (e.key === " ") {
+                    e.preventDefault();
+                    useSelection.getState().choose(`shot:${shot.id}`, order, e);
+                  }
+                }}
+                aria-label={`Shot ${shot.title}`}
+              >
+                <div>
+                  {asset ? <img src={asset.url} alt="" /> : <Film size={26} />}
+                  <span>
+                    {shot.targetFrames / 30}s · {shotStatus(d, shot)}
+                  </span>
+                </div>
+                <b>{shot.title}</b>
+                <small>
+                  {p.unfiled ? "Unfiled" : p.title} ·{" "}
+                  {d.scenes[shot.sceneId].title}
+                </small>
+                <button
+                  className="st-text-button st-home-card-open"
+                  aria-label={`Open shot ${shot.title}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openShot(shot.id);
+                  }}
+                >
+                  Open <ArrowUpRight size={12} />
+                </button>
+              </article>
+            </CommandMenu>
+          );
+        })
+      : [...scenes].reverse().map((scene) => {
+          const ep = d.episodes[scene.episodeId],
+            p = d.projects[ep.projectId],
+            shot = d.shots[scene.shotIds[0]],
+            asset = shot && shotAsset(d, shot);
+          return (
+            <CommandMenu
+              key={scene.id}
+              ids={[]}
+              onSelect={() => {
+                if (!keys.includes(`scene:${scene.id}`))
+                  useSelection.getState().replace([`scene:${scene.id}`]);
+              }}
+            >
+              <article
+                className={`st-home-work-card ${keys.includes(`scene:${scene.id}`) ? "is-selected" : ""}`}
+                data-selection-key={`scene:${scene.id}`}
+                key={scene.id}
+                tabIndex={0}
+                aria-label={`Scene ${scene.title}`}
+                onClick={(e) =>
+                  selectWork(`scene:${scene.id}`, e, () =>
+                    navigate(
+                      `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
+                    ),
+                  )
+                }
+                onDoubleClick={() =>
+                  navigate(
+                    `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
+                  )
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter")
+                    navigate(
+                      `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
+                    );
+                  if (e.key === " ") {
+                    e.preventDefault();
+                    useSelection
+                      .getState()
+                      .choose(`scene:${scene.id}`, order, e);
+                  }
+                }}
+              >
+                <div>
+                  {asset ? (
+                    <img src={asset.url} alt="" />
+                  ) : (
+                    <Clapperboard size={26} />
+                  )}
+                  <span>{scene.shotIds.length} shots</span>
+                </div>
+                <b>{scene.title}</b>
+                <small>
+                  {p.unfiled ? "Unfiled" : p.title} · {ep.title}
+                </small>
+                <Link
+                  className="st-text-button st-home-card-open"
+                  aria-label={`Open scene ${scene.title}`}
+                  onClick={(e) => e.stopPropagation()}
+                  to={`/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`}
+                >
+                  Open <ArrowUpRight size={12} />
+                </Link>
+              </article>
+            </CommandMenu>
+          );
+        });
+  const recentProjects = [...projects]
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    .slice(0, 20);
   return (
     <div className="st-home-workspace">
       <header className="st-home-toolbar">
@@ -126,272 +314,150 @@ export function HomeWorkspace() {
       </header>
       <SelectionSurface
         className="st-home-canvas st-panel-scroll"
-        aria-label="All work"
+        aria-label="Home content"
       >
-        <section>
-          <div className="st-section-heading">
-            <h1>{scope === "unfiled" ? "Unfiled work" : "Recent work"}</h1>
-            <span>
-              {workType === "shots" ? shots.length : scenes.length} {workType}
-            </span>
+        <HomeWelcome
+          production={
+            recentProjects[0] &&
+            recentProjects[0].episodeIds.find((id) => !d.episodes[id]?.archived)
+              ? {
+                  title: recentProjects[0].title,
+                  subtitle:
+                    d.episodes[
+                      recentProjects[0].episodeIds.find(
+                        (id) => !d.episodes[id]?.archived,
+                      )!
+                    ]?.title ?? "Your next episode",
+                  cover: recentProjects[0].cover,
+                  href: `/projects/${recentProjects[0].id}/episodes/${recentProjects[0].episodeIds.find((id) => !d.episodes[id]?.archived)}`,
+                }
+              : undefined
+          }
+        >
+          <div className="st-composer-dock">
+            <CreationKindPicker
+              value={creationKind}
+              onChange={setCreationKind}
+            />
+            {!demo && request && replyOpen && (
+              <HomeInterpretationReply
+                request={request}
+                onClose={() => setReplyOpen(false)}
+              />
+            )}
+            {!idea && (
+              <div className="st-composer-examples" aria-label="Starting ideas">
+                {[
+                  {
+                    title: "Dialogue",
+                    idea: "INT. CAFE — DAY\nTwo old friends meet. One has a secret they can no longer hide.",
+                  },
+                  {
+                    title: "Suspense",
+                    idea: "INT. APARTMENT — NIGHT\nA stranger leaves a recording. The voice on it is your own.",
+                  },
+                  {
+                    title: "Product",
+                    idea: "INT. STUDIO — DAY\nReveal a new object through texture, movement, and close-up details.",
+                  },
+                ].map((t) => (
+                  <button
+                    key={t.title}
+                    onClick={() => {
+                      setIdea(t.idea);
+                      document.getElementById("story-idea")?.focus();
+                    }}
+                  >
+                    {t.title}
+                    <ArrowUpRight size={11} />
+                  </button>
+                ))}
+              </div>
+            )}
+            <FloatingPromptForm
+              id="story-idea"
+              label="Story idea"
+              formLabel="Create a draft"
+              value={idea}
+              onChange={setIdea}
+              onSubmit={create}
+              busy={busy}
+            />
+            {validation && (
+              <p className="st-home-chat-error" role="alert">
+                {validation}
+              </p>
+            )}
+            {!demo && request && !replyOpen && (
+              <button
+                className="st-text-button st-home-reopen"
+                onClick={() => setReplyOpen(true)}
+              >
+                View reply
+              </button>
+            )}
+            <small className="st-composer-note">
+              Drafting is free. Credits are spent when you generate media.
+            </small>
           </div>
-          <div className="st-home-work-grid">
-            {workType === "shots"
-              ? [...shots].reverse().map((shot) => {
-                  const ep = d.episodes[d.scenes[shot.sceneId].episodeId],
-                    p = d.projects[ep.projectId],
-                    asset = shotAsset(d, shot);
-                  return (
-                    <article
-                      className={`st-home-work-card ${keys.includes(`shot:${shot.id}`) ? "is-selected" : ""}`}
-                      data-selection-key={`shot:${shot.id}`}
-                      key={shot.id}
-                      tabIndex={0}
-                      onClick={(e) =>
-                        selectWork(`shot:${shot.id}`, e, () =>
-                          openShot(shot.id),
-                        )
-                      }
-                      onDoubleClick={() => openShot(shot.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") openShot(shot.id);
-                        if (e.key === " ") {
-                          e.preventDefault();
-                          useSelection
-                            .getState()
-                            .choose(`shot:${shot.id}`, order, e);
-                        }
-                      }}
-                      aria-label={`Shot ${shot.title}`}
-                    >
-                      <div>
-                        {asset ? (
-                          <img src={asset.url} alt="" />
-                        ) : (
-                          <Film size={26} />
-                        )}
-                        <span>
-                          {shot.targetFrames / 30}s · {shotStatus(d, shot)}
-                        </span>
-                      </div>
-                      <b>{shot.title}</b>
-                      <small>
-                        {p.unfiled ? "Unfiled" : p.title} ·{" "}
-                        {d.scenes[shot.sceneId].title}
-                      </small>
-                      <button
-                        className="st-text-button st-home-card-open"
-                        aria-label={`Open shot ${shot.title}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openShot(shot.id);
-                        }}
-                      >
-                        Open <ArrowUpRight size={12} />
-                      </button>
-                    </article>
-                  );
-                })
-              : [...scenes].reverse().map((scene) => {
-                  const ep = d.episodes[scene.episodeId],
-                    p = d.projects[ep.projectId],
-                    shot = d.shots[scene.shotIds[0]],
-                    asset = shot && shotAsset(d, shot);
-                  return (
-                    <article
-                      className={`st-home-work-card ${keys.includes(`scene:${scene.id}`) ? "is-selected" : ""}`}
-                      data-selection-key={`scene:${scene.id}`}
-                      key={scene.id}
-                      tabIndex={0}
-                      aria-label={`Scene ${scene.title}`}
-                      onClick={(e) =>
-                        selectWork(`scene:${scene.id}`, e, () =>
-                          navigate(
-                            `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
-                          ),
-                        )
-                      }
-                      onDoubleClick={() =>
-                        navigate(
-                          `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
-                        )
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter")
-                          navigate(
-                            `/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`,
-                          );
-                        if (e.key === " ") {
-                          e.preventDefault();
-                          useSelection
-                            .getState()
-                            .choose(`scene:${scene.id}`, order, e);
-                        }
-                      }}
-                    >
-                      <div>
-                        {asset ? (
-                          <img src={asset.url} alt="" />
-                        ) : (
-                          <Clapperboard size={26} />
-                        )}
-                        <span>{scene.shotIds.length} shots</span>
-                      </div>
-                      <b>{scene.title}</b>
-                      <small>
-                        {p.unfiled ? "Unfiled" : p.title} · {ep.title}
-                      </small>
-                      <Link
-                        className="st-text-button st-home-card-open"
-                        aria-label={`Open scene ${scene.title}`}
-                        onClick={(e) => e.stopPropagation()}
-                        to={`/projects/${p.id}/episodes/${ep.id}?scene=${scene.id}`}
-                      >
-                        Open <ArrowUpRight size={12} />
-                      </Link>
-                    </article>
-                  );
-                })}
-          </div>
-          {!(workType === "shots" ? shots.length : scenes.length) && (
-            <div className="st-home-empty">
-              <Film size={26} />
-              <p>No {workType} yet</p>
+        </HomeWelcome>
+        <HomeCardRow
+          label="Recent work"
+          count={Math.min(workCards.length, 20)}
+          empty={`No recent ${workType}`}
+        >
+          {workCards.slice(0, 20)}
+        </HomeCardRow>
+        <HomeCardRow
+          label="Projects"
+          count={recentProjects.length}
+          empty="No projects yet"
+        >
+          {recentProjects.map((p) => (
+            <ProjectCard
+              key={p.id}
+              id={p.id}
+              order={recentProjects.map((p) => `project:${p.id}` as EntityKey)}
+            />
+          ))}
+        </HomeCardRow>
+        <div role="group" aria-label="All work">
+          <section>
+            <div className="st-section-heading">
+              <h1>All work</h1>
               <span>
-                Describe your first {workType === "shots" ? "shot" : "scene"}{" "}
-                below.
+                {workType === "shots" ? shots.length : scenes.length} {workType}
               </span>
             </div>
-          )}
-        </section>
+            <div className="st-home-work-grid">{workCards}</div>
+            {!(workType === "shots" ? shots.length : scenes.length) && (
+              <div className="st-home-empty">
+                <Film size={26} />
+                <p>No {workType} yet</p>
+                <span>
+                  Describe your first {workType === "shots" ? "shot" : "scene"}{" "}
+                  below.
+                </span>
+              </div>
+            )}
+          </section>
+        </div>
       </SelectionSurface>
-      <div className="st-composer-dock">
-        {!idea && (
-          <div className="st-composer-examples" aria-label="Starting ideas">
-            {[
-              {
-                title: "Dialogue",
-                idea: "INT. CAFE — DAY\nTwo old friends meet. One has a secret they can no longer hide.",
-              },
-              {
-                title: "Suspense",
-                idea: "INT. APARTMENT — NIGHT\nA stranger leaves a recording. The voice on it is your own.",
-              },
-              {
-                title: "Product",
-                idea: "INT. STUDIO — DAY\nReveal a new object through texture, movement, and close-up details.",
-              },
-            ].map((t) => (
-              <button
-                key={t.title}
-                onClick={() => {
-                  setIdea(t.idea);
-                  document.getElementById("story-idea")?.focus();
-                }}
-              >
-                {t.title}
-                <ArrowUpRight size={11} />
-              </button>
-            ))}
-          </div>
-        )}
-        <form
-          className={`st-home-composer ${idea ? "has-content" : ""}`}
-          aria-label="Create a draft"
-          onSubmit={(e) => {
-            e.preventDefault();
-            create();
-          }}
-        >
-          <textarea
-            id="story-idea"
-            aria-label="Story idea"
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            placeholder="Describe a story, scene or shot…"
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                create();
-              }
-            }}
-          />
-          <div className="st-composer-controls">
-            <label>
-              Create
-              <select
-                aria-label="Creation type"
-                value={kind}
-                onChange={(e) => {
-                  const value = e.target.value as typeof kind;
-                  setKind(value);
-                  setSeconds(
-                    value === "shot" ? 5 : value === "scene" ? 15 : 30,
-                  );
-                }}
-              >
-                <option value="episode">Episode</option>
-                <option value="scene">Scene</option>
-                <option value="shot">Shot</option>
-              </select>
-            </label>
-            <label>
-              Project
-              <select
-                aria-label="Story project"
-                value={pid}
-                onChange={(e) => setPid(e.target.value)}
-              >
-                <option value="">No project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Duration
-              <select
-                aria-label="Story duration"
-                value={seconds}
-                onChange={(e) => setSeconds(Number(e.target.value))}
-              >
-                {(kind === "shot"
-                  ? [3, 5, 8, 10, 15, 20, 30]
-                  : kind === "scene"
-                    ? [5, 10, 15, 30]
-                    : [15, 30, 60, 90]
-                ).map((n) => (
-                  <option key={n} value={n}>
-                    {n}s
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="st-button st-primary"
-              title="Create draft (⌘+Enter)"
-            >
-              Create {kind === "episode" ? "board" : kind} · 0 cr
-              <ArrowUp size={15} />
-            </button>
-          </div>
-        </form>
-        <small className="st-composer-note">
-          Drafting is free. Credits are spent when you generate media.
-        </small>
-      </div>
     </div>
   );
 }
 export function ProjectsWorkspace() {
+  return useOwnedData() ? <ServerProjects /> : <LocalProjectsWorkspace />;
+}
+function LocalProjectsWorkspace() {
   const d = useStore((s) => s.data),
     navigate = useNavigate();
   const [query, setQuery] = useState("");
   const projects = Object.values(d.projects).filter(
-    (p) => !p.unfiled && p.title.toLowerCase().includes(query.toLowerCase()),
+    (p) =>
+      !p.unfiled &&
+      !p.archived &&
+      p.title.toLowerCase().includes(query.toLowerCase()),
   );
   const commands = useMemo<StudioCommand[]>(
     () => [
@@ -565,8 +631,17 @@ export function EpisodeTile({ id }: { id: string }) {
   );
   useRegisterCommands(`tile:${id}`, tileCommands);
   if (!ep) return null;
-  const shots = shotsOfEpisode(d, id),
-    asset = shots[0] ? shotAsset(d, shots[0]) : undefined;
+  const { shots, ready, total, status } = episodeProgress(d, id);
+  const asset = shots[0] ? shotAsset(d, shots[0]) : undefined;
+  const coverScene = ep.sceneIds
+    .map((id) => d.scenes[id])
+    .filter((scene) => scene && !scene.archived)
+    .find((scene) => scene.title === ep.title);
+  const project = d.projects[ep.projectId];
+  const number = String(project.episodeIds.indexOf(id) + 1).padStart(2, "0");
+  const order = project.episodeIds
+    .filter((id) => !d.episodes[id]?.archived)
+    .map((id) => `episode:${id}` as EntityKey);
   return (
     <CommandMenu
       ids={[
@@ -579,54 +654,93 @@ export function EpisodeTile({ id }: { id: string }) {
       }}
     >
       <article
-        className={`st-episode-tile ${selected ? "is-selected" : ""}`}
+        className={`production-episode-card ${selected ? "is-selected" : ""}`}
         data-selection-key={`episode:${id}`}
         aria-label={`Episode ${ep.title}`}
-        onClick={(e) =>
-          useSelection.getState().choose(
-            `episode:${id}`,
-            Object.keys(d.episodes).map((id) => `episode:${id}` as EntityKey),
-            e,
-          )
+        tabIndex={0}
+        onClick={(event) =>
+          useSelection.getState().choose(`episode:${id}`, order, event)
         }
         onDoubleClick={() =>
           navigate(`/projects/${ep.projectId}/episodes/${id}`)
         }
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "Enter")
+            navigate(`/projects/${ep.projectId}/episodes/${id}`);
+          if (event.key === " ") {
+            event.preventDefault();
+            useSelection.getState().choose(`episode:${id}`, order, event);
+          }
+        }}
       >
-        <div className="st-episode-cover">
-          <img src={asset?.url ?? d.projects[ep.projectId].cover} alt="" />
-          <span>
-            {ep.creationKind === "shot"
-              ? "Shot"
-              : ep.creationKind === "scene"
-                ? "Scene"
-                : `${shots.length} shots`}
-          </span>
+        <div className="production-episode-cover">
+          <img src={coverScene?.cover || asset?.url || project.cover} alt="" />
+          <span>{number}</span>
         </div>
-        <div className="st-episode-tile-copy">
-          <b>{ep.title}</b>
-          <p>
-            {ep.sceneIds.length} scenes · {ep.targetSeconds}s
-          </p>
-          <div>
-            <span>
-              {shots.filter((s) => s.currentTakeId).length} Video ·{" "}
-              {shots.filter((s) => s.imageTakeId && !s.currentTakeId).length}{" "}
-              Still
-            </span>
-            <Link
-              className="st-text-button"
-              to={`/projects/${ep.projectId}/episodes/${id}`}
+        <div className="production-episode-copy">
+          <h3>
+            <span>{number}</span>
+            {ep.title}
+          </h3>
+          <p>{ep.synopsis || "Your next chapter is waiting to be written."}</p>
+          {ready > 0 && ready < total ? (
+            <div className="production-episode-progress">
+              <span>
+                {ready} of {total} shots ready
+              </span>
+              <progress
+                aria-label={`Ready shots for ${ep.title}`}
+                value={ready}
+                max={total}
+              />
+            </div>
+          ) : (
+            <span
+              className={`production-episode-status ${status === "In progress" ? "in-progress" : status === "Ready to review" ? "is-ready" : ""}`}
             >
-              Open ↗
+              {status !== "Draft" && <i />}
+              {status}
+            </span>
+          )}
+          <footer>
+            <Link
+              to={`/projects/${ep.projectId}/episodes/${id}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <ArrowRight size={20} />
+              Open episode
             </Link>
-          </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  aria-label={`Options for ${ep.title}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <MoreHorizontal size={21} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {tileCommands.map((command) => (
+                  <DropdownMenuItem key={command.id} onSelect={command.run}>
+                    {command.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </footer>
         </div>
       </article>
     </CommandMenu>
   );
 }
 export function ProjectWorkspace() {
+  return <LocalProjectWorkspace />;
+}
+function LocalProjectWorkspace() {
   const { projectId = "" } = useParams(),
     d = useStore((s) => s.data),
     p = d.projects[projectId],
@@ -665,47 +779,12 @@ export function ProjectWorkspace() {
   useRegisterCommands("project", commands);
   if (!p) return <div className="st-empty">Project unavailable</div>;
   return (
-    <div className="st-project-page">
-      <SelectionSurface
-        className="st-panel-scroll st-project-content"
-        aria-label="Episode cards"
-      >
-        <div className="st-section-heading">
-          <div className="st-project-heading">
-            <span>Episodes</span>
-            <h1>
-              <input
-                aria-label="Project name"
-                defaultValue={p.title}
-                key={p.id}
-                onBlur={(e) => {
-                  if (e.target.value !== p.title)
-                    commit((data) => {
-                      renameWorkspaceProject(data, projectId, e.target.value);
-                    }, "Project renamed");
-                }}
-              />
-            </h1>
-          </div>
-          <CommandButton id="new.episode">
-            <Plus size={13} />
-            New episode
-          </CommandButton>
-        </div>
-        <div className="st-episode-grid">
-          {p.episodeIds
-            .filter((id) => !d.episodes[id].archived)
-            .map((id) => (
-              <EpisodeTile key={id} id={id} />
-            ))}
-        </div>
-        {p.episodeIds.every((id) => d.episodes[id].archived) && (
-          <div className="st-empty">
-            <p>No episodes</p>
-            <CommandButton id="new.episode" />
-          </div>
-        )}
-      </SelectionSurface>
-    </div>
+    <ProductionOverview projectId={projectId}>
+      {p.episodeIds
+        .filter((id) => !d.episodes[id]?.archived)
+        .map((id) => (
+          <EpisodeTile key={id} id={id} />
+        ))}
+    </ProductionOverview>
   );
 }

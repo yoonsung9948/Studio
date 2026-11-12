@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"nori/studio/server/internal/accounts"
 	"nori/studio/server/internal/platform/apperr"
 )
 
@@ -25,6 +26,8 @@ func (r *responder) error(w http.ResponseWriter, err error) {
 	var validation *apperr.ValidationError
 	var conflict *apperr.ConflictError
 	switch {
+	case errors.Is(err, accounts.ErrDisabled):
+		writeError(w, http.StatusForbidden, "account_disabled", "Your account is disabled.")
 	case errors.As(err, &validation):
 		writeError(w, http.StatusBadRequest, "invalid_request", validation.Message)
 	case errors.Is(err, apperr.ErrNotFound):
@@ -47,7 +50,10 @@ func pathID(req *http.Request, name, label string) (string, error) {
 }
 
 func decode(w http.ResponseWriter, req *http.Request, dst any) error {
-	req.Body = http.MaxBytesReader(w, req.Body, 64<<10)
+	return decodeLimit(w, req, dst, 64<<10)
+}
+func decodeLimit(w http.ResponseWriter, req *http.Request, dst any, limit int64) error {
+	req.Body = http.MaxBytesReader(w, req.Body, limit)
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dst); err != nil {
@@ -67,4 +73,15 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
+}
+
+func decodeObject[T any](w http.ResponseWriter, req *http.Request) (*T, error) {
+	var in *T
+	if err := decode(w, req, &in); err != nil {
+		return nil, err
+	}
+	if in == nil {
+		return nil, &apperr.ValidationError{Message: "request must contain a JSON object"}
+	}
+	return in, nil
 }

@@ -1,0 +1,119 @@
+/* Only the project sidebar changes. Shared header, pages and bottom tools retain their styles. */
+.studio-shell.studio-layout:has(.studio-project-navigation) {
+  --nav-width: 240px;
+}
+.studio-sidebar .studio-project-navigation {
+  padding: 0 12px;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+.studio-project-navigation .studio-all-projects {
+  padding: 0 12px;
+  margin: 5px 0 25px;
+  border-left: 0;
+  gap: 12px;
+}
+.studio-project-context {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+  padding: 0 6px 24px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.studio-sidebar
+  .studio-project-navigation
+  > button:not(.studio-all-projects):not(.studio-scope-toggle) {
+  border: 0;
+  padding: 0 14px;
+  gap: 14px;
+  border-radius: 7px;
+  min-height: 50px;
+}
+.studio-sidebar .studio-project-navigation > button[aria-current="page"] {
+  color: var(--accent);
+}
+.studio-sidebar .studio-project-navigation .studio-scope-toggle {
+  display: none;
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .studio-project-navigation button span {
+    display: inline;
+  }
+  .studio-sidebar .studio-project-navigation .studio-all-projects {
+    gap: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .studio-shell.studio-layout:has(.studio-project-navigation) {
+    --nav-width: 52px;
+  }
+  .studio-sidebar:has(.studio-project-navigation) {
+    position: relative;
+  }
+  .studio-sidebar .studio-project-navigation {
+    padding: 0;
+    overflow: visible;
+  }
+  .studio-sidebar
+    .studio-project-navigation
+    > button:not(.studio-all-projects):not(.studio-scope-toggle),
+  .studio-project-navigation .studio-all-projects {
+    padding: 0;
+    justify-content: center;
+    border-radius: 0;
+    margin: 0;
+  }
+  .studio-sidebar .studio-project-navigation .studio-scope-toggle {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+  }
+  .studio-project-context {
+    display: none;
+    position: absolute;
+    left: 51px;
+    top: 10px;
+    width: min(250px, calc(100vw - 66px));
+    background: var(--surface);
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    z-index: 25;
+    box-shadow: var(--shadow);
+  }
+  .studio-project-context.is-open {
+    display: flex;
+  }
+}
+
+/* Thumbnail pickers keep the current production and episode visible together. */
+.studio-shell.studio-layout:has(.studio-project-navigation) {
+  --nav-width: 228px;
+}
+.studio-project-navigation .studio-all-projects {
+  margin: 0 0 8px;
+}
+.studio-project-context {
+  gap: 16px;
+  padding: 0 2px 12px;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.studio-sidebar .studio-project-navigation > button[aria-current="page"] {
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface));
+  border-left: 4px solid var(--accent) !important;
+  border-radius: 0 6px 6px 0;
+}
+@media (max-width: 767px) {
+  .studio-shell.studio-layout:has(.studio-project-navigation) {
+    --nav-width: 52px;
+  }
+  .studio-project-context {
+    padding: 18px;
+  }
+  .studio-project-navigation .studio-all-projects {
+    margin: 0;
+  }
+}

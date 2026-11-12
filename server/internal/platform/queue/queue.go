@@ -59,7 +59,9 @@ func Valid(name string) bool {
 
 // RescueAfter is how long a job may run before River treats it as stuck and
 // retries it. Every single step must finish well within it.
-const RescueAfter = 2 * time.Minute
+const RescueAfter = 4 * time.Minute
+
+const WorkerStopTimeout = 190 * time.Second
 
 // New creates a River client that runs every queue with the given limits.
 func New(pool *pgxpool.Pool, workers *river.Workers, logger *slog.Logger, limits Limits) (*Client, error) {
@@ -69,6 +71,6 @@ func New(pool *pgxpool.Pool, workers *river.Workers, logger *slog.Logger, limits
 	}
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Workers: workers, Queues: queues,
-		Logger: logger, JobTimeout: 30 * time.Second, RescueStuckJobsAfter: RescueAfter, SoftStopTimeout: 10 * time.Second,
+		Logger: logger, JobTimeout: 30 * time.Second, RescueStuckJobsAfter: RescueAfter, SoftStopTimeout: WorkerStopTimeout,
 	})
 }

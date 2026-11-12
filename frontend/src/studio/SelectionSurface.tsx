@@ -1,3 +1,4 @@
+import { CommandMenu } from "./commands";
 import {
   useEffect,
   useRef,
@@ -58,7 +59,50 @@ export function SelectionSurface({
       const hits = Array.from(
         root.querySelectorAll<HTMLElement>("[data-selection-key]"),
       )
-        .filter((node) => intersects(rect, node.getBoundingClientRect()))
+        .filter((node) => {
+          const bounds = node.getBoundingClientRect();
+          const visible = {
+            left: bounds.left,
+            top: bounds.top,
+            right: bounds.right,
+            bottom: bounds.bottom,
+          };
+          // Scrollable rows clip cards; only their visible portion can be selected.
+          for (
+            let parent = node.parentElement;
+            parent;
+            parent = parent.parentElement
+          ) {
+            const style = getComputedStyle(parent);
+            const bounds = parent.getBoundingClientRect();
+            if (
+              parent.clientWidth > 0 &&
+              /auto|scroll|hidden|clip/.test(style.overflowX || style.overflow)
+            ) {
+              visible.left = Math.max(visible.left, bounds.left);
+              visible.right = Math.min(
+                visible.right,
+                bounds.left + parent.clientWidth,
+              );
+            }
+            if (
+              parent.clientHeight > 0 &&
+              /auto|scroll|hidden|clip/.test(style.overflowY || style.overflow)
+            ) {
+              visible.top = Math.max(visible.top, bounds.top);
+              visible.bottom = Math.min(
+                visible.bottom,
+                bounds.top + parent.clientHeight,
+              );
+            }
+            if (parent === root) break;
+          }
+          return (
+            visible.right > visible.left &&
+            visible.bottom > visible.top &&
+            intersects(rect, visible)
+          );
+        })
         .map((node) => node.dataset.selectionKey as EntityKey);
       const keys = Array.from(
         new Set(g.additive ? [...g.initial, ...hits] : hits),
@@ -196,110 +240,116 @@ export function SelectionSurface({
     };
   }, []);
   return (
-    <div
-      {...props}
-      ref={(node) => {
-        surface.current = node;
-        if (scrollRef) scrollRef.current = node;
-      }}
-      className={`st-selection-surface ${className}`}
-      role={props.role ?? "group"}
-      onPointerDownCapture={(event) => {
-        if (
-          event.button !== 0 ||
-          event.pointerType === "touch" ||
-          event.isPrimary === false ||
-          !(event.target instanceof Element) ||
-          !event.currentTarget.contains(event.target)
-        )
-          return;
-        const bounds = event.currentTarget.getBoundingClientRect();
-        if (
-          (event.currentTarget.clientWidth > 0 &&
-            event.clientX > bounds.left + event.currentTarget.clientWidth) ||
-          (event.currentTarget.clientHeight > 0 &&
-            event.clientY > bounds.top + event.currentTarget.clientHeight)
-        )
-          return;
-        const target = event.target,
-          item = target.closest("[data-selection-key]"),
-          control = target.closest(interactive);
-        if (
-          (control && control !== item) ||
-          target.closest('[draggable="true"]')
-        )
-          return;
-        const scrolls: Gesture["scrolls"] = [];
-        for (
-          let node: HTMLElement | null = event.currentTarget;
-          node;
-          node = node.parentElement
-        ) {
-          const style = getComputedStyle(node);
+    <CommandMenu ids={[]} className="st-selection-context">
+      <div
+        {...props}
+        ref={(node) => {
+          surface.current = node;
+          if (scrollRef) scrollRef.current = node;
+        }}
+        className={`st-selection-surface ${className}`}
+        role={props.role ?? "group"}
+        onPointerDownCapture={(event) => {
           if (
-            /auto|scroll/.test(
-              style.overflow + style.overflowX + style.overflowY,
-            ) &&
-            (node.scrollHeight > node.clientHeight ||
-              node.scrollWidth > node.clientWidth)
+            event.button !== 0 ||
+            event.pointerType === "touch" ||
+            event.isPrimary === false ||
+            !(event.target instanceof Element) ||
+            !event.currentTarget.contains(event.target)
           )
-            scrolls.push({ node, left: node.scrollLeft, top: node.scrollTop });
-        }
-        gesture.current = {
-          pointerId: event.pointerId,
-          x: event.clientX,
-          y: event.clientY,
-          lastX: event.clientX,
-          lastY: event.clientY,
-          active: false,
-          additive: event.metaKey || event.ctrlKey || event.shiftKey,
-          initial: [...useSelection.getState().keys],
-          scrolls,
-        };
-      }}
-      onClickCapture={(event) => {
-        if (suppressClick.current) {
-          event.preventDefault();
-          event.stopPropagation();
-          suppressClick.current = false;
-          return;
-        }
-        if (
-          event.target instanceof Element &&
-          event.currentTarget.contains(event.target) &&
-          !event.target.closest("[data-selection-key]") &&
-          !event.target.closest(interactive) &&
-          !event.metaKey &&
-          !event.ctrlKey &&
-          !event.shiftKey
-        )
-          useSelection.getState().replace([]);
-      }}
-      onDragStartCapture={(event) => {
-        if (
-          event.target instanceof Element &&
-          !event.target.closest('[draggable="true"],.drag-handle')
-        )
-          event.preventDefault();
-      }}
-    >
-      {children}
-      {box &&
-        box.right > box.left &&
-        box.bottom > box.top &&
-        createPortal(
-          <div
-            className="st-selection-marquee"
-            aria-hidden="true"
-            style={{
-              left: box.left,
-              top: box.top,
-              width: box.right - box.left,
-              height: box.bottom - box.top,
-            }}
-          />,
-          document.body,
-        )}
-    </div>
+            return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (
+            (event.currentTarget.clientWidth > 0 &&
+              event.clientX > bounds.left + event.currentTarget.clientWidth) ||
+            (event.currentTarget.clientHeight > 0 &&
+              event.clientY > bounds.top + event.currentTarget.clientHeight)
+          )
+            return;
+          const target = event.target,
+            item = target.closest("[data-selection-key]"),
+            control = target.closest(interactive);
+          if (
+            (control && control !== item) ||
+            target.closest('[draggable="true"]')
+          )
+            return;
+          const scrolls: Gesture["scrolls"] = [];
+          for (
+            let node: HTMLElement | null = event.currentTarget;
+            node;
+            node = node.parentElement
+          ) {
+            const style = getComputedStyle(node);
+            if (
+              /auto|scroll/.test(
+                style.overflow + style.overflowX + style.overflowY,
+              ) &&
+              (node.scrollHeight > node.clientHeight ||
+                node.scrollWidth > node.clientWidth)
+            )
+              scrolls.push({
+                node,
+                left: node.scrollLeft,
+                top: node.scrollTop,
+              });
+          }
+          gesture.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            active: false,
+            additive: event.metaKey || event.ctrlKey || event.shiftKey,
+            initial: [...useSelection.getState().keys],
+            scrolls,
+          };
+        }}
+        onClickCapture={(event) => {
+          if (suppressClick.current) {
+            event.preventDefault();
+            event.stopPropagation();
+            suppressClick.current = false;
+            return;
+          }
+          if (
+            event.target instanceof Element &&
+            event.currentTarget.contains(event.target) &&
+            !event.target.closest("[data-selection-key]") &&
+            !event.target.closest(interactive) &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.shiftKey
+          )
+            useSelection.getState().replace([]);
+        }}
+        onDragStartCapture={(event) => {
+          if (
+            event.target instanceof Element &&
+            !event.target.closest('[draggable="true"],.drag-handle')
+          )
+            event.preventDefault();
+        }}
+      >
+        {children}
+        {box &&
+          box.right > box.left &&
+          box.bottom > box.top &&
+          createPortal(
+            <div
+              className="st-selection-marquee"
+              aria-hidden="true"
+              style={{
+                left: box.left,
+                top: box.top,
+                width: box.right - box.left,
+                height: box.bottom - box.top,
+              }}
+            />,
+            surface.current?.closest(".studio-shell") ?? document.body,
+          )}
+      </div>
+    </CommandMenu>
   );
 }

@@ -562,7 +562,7 @@ export function SceneWorkspace() {
                     <button
                       key={c.id}
                       onClick={() => {
-                        const looks = characterLooks(d, c.id),
+                        const looks = characterLooks(d, c.id, sc.episodeId),
                           summer = looks.find(
                             (l) =>
                               /summer/i.test(

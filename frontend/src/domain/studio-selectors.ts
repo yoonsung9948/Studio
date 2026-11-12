@@ -9,6 +9,8 @@ export const referenceLabels: Record<ReferenceType, string> = {
   front: "Front portrait",
   three_quarter: "Three-quarter portrait",
   profile: "Side profile",
+  right_profile: "Right profile",
+  back: "Back view",
   full_body: "Full-body front",
   full_body_three_quarter: "Full-body three-quarter",
   custom: "Additional angle",
@@ -43,8 +45,12 @@ export function validVersion(d: Data, id?: string) {
     !d.assets[v.assetId]?.missing
   );
 }
-export const characterLooks = (d: Data, id: string) =>
-  Object.values(d.studio.looks).filter((l) => l.characterId === id);
+export const characterLooks = (d: Data, id: string, episodeId?: string) =>
+  Object.values(d.studio.looks).filter(
+    (look) =>
+      look.characterId === id &&
+      (!episodeId || !look.episodeId || look.episodeId === episodeId),
+  );
 export const characterReferences = (d: Data, id: string) =>
   Object.values(d.studio.references).filter(
     (r) => r.characterId === id && !r.lookId,
@@ -120,19 +126,25 @@ export function studioJobPath(d: Data, j: GenerationJob) {
   if (!j.target)
     return `/projects/${j.projectId}/episodes/${j.episodeId}/scenes/${j.sceneId}`;
   const { kind, id } = j.target;
-  if (kind === "location") {
-    const sc = Object.values(d.studio.setups).find((s) => s.locationId === id);
-    return sc
-      ? `/projects/${j.projectId}/episodes/${d.scenes[sc.sceneId]?.episodeId}/scenes/${sc.sceneId}/setup`
-      : `/projects/${j.projectId}/assets`;
-  }
-  const cid =
-    kind === "identity"
-      ? id
+  const reference = kind === "reference" ? d.studio.references[id] : undefined;
+  const look = d.studio.looks[kind === "look" ? id : (reference?.lookId ?? "")];
+  if (look?.episodeId)
+    return `/projects/${j.projectId}/episodes/${look.episodeId}/references/characters/${look.characterId}/looks/${look.id}?tab=views&view=${reference?.type ?? "front"}`;
+  const params = new URLSearchParams({
+    kind:
+      kind === "location" ? "places" : kind === "prop" ? "props" : "characters",
+    tab: "views",
+    view: j.viewType ?? reference?.type ?? "front",
+  });
+  params.set(
+    kind === "location" || kind === "prop"
+      ? "asset"
       : kind === "look"
-        ? d.studio.looks[id]?.characterId
-        : d.studio.references[id]?.characterId;
-  return `/projects/${j.projectId}/characters/${cid}?tab=${kind === "reference" ? "references" : kind === "look" ? "looks" : "identity"}${kind === "look" ? "&look=" + id : ""}`;
+        ? "look"
+        : "character",
+    kind === "reference" ? (reference?.characterId ?? id) : id,
+  );
+  return `/assets?${params}`;
 }
 export function studioJobTitle(d: Data, j: GenerationJob) {
   const t = j.target;
@@ -145,5 +157,28 @@ export function studioJobTitle(d: Data, j: GenerationJob) {
     const r = d.studio.references[t.id];
     return `${d.characters[r?.characterId]?.name} · ${r ? referenceLabels[r.type] : "reference"}`;
   }
+  if (t.kind === "prop")
+    return `${d.projects[j.projectId]?.worldElements?.find((item) => item.id === t.id)?.name ?? "Prop"} · image candidates`;
   return `${d.studio.locations[t.id]?.name} · location image`;
+}
+
+/** A look sheet opens on its front portrait; legacy look images remain usable. */
+export function lookFrontPortrait(d: Data, lookId: string) {
+  const look = d.studio.looks[lookId];
+  if (!look) return undefined;
+  const front = Object.values(d.studio.references).find(
+    (ref) =>
+      ref.characterId === look.characterId &&
+      ref.lookId === lookId &&
+      ref.type === "front",
+  );
+  for (const id of [front?.activeVersionId, look.primaryVersionId]) {
+    const version = id ? d.studio.versions[id] : undefined;
+    const asset =
+      version && version.approval !== "rejected"
+        ? d.assets[version.assetId]
+        : undefined;
+    if (asset?.url && !asset.missing) return asset;
+  }
+  return undefined;
 }

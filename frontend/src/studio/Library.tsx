@@ -1,13 +1,13 @@
+import {
+  episodeMediaAssetIds,
+  attachEpisodeMedia,
+} from "../domain/episode-resources";
+import { useOwnedData } from "../services/server-data";
+import { ServerLibrary } from "./ServerLibrary";
 import { SelectionSurface } from "./SelectionSurface";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import {
-  Upload,
-  ArrowUpRight,
-  FileVideo,
-  Music,
-  ImageIcon,
-} from "lucide-react";
+import { ArrowUpRight, FileVideo, Music, ImageIcon } from "lucide-react";
 import { useStore } from "../stores/store";
 import { useSelection, type EntityKey } from "./selection";
 import { commit } from "./generation";
@@ -29,34 +29,81 @@ import {
   RegisteredInspectorSections,
 } from "./inspector";
 import { downloadManifest } from "../services/mock";
+import { LibraryCard, LibraryToolbar } from "./LibraryComponents";
+import { describeLibraryAsset } from "./library-media";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "../components/ui/dialog";
 import { useActions } from "../components/Actions";
 export function LibraryWorkspace() {
-  const { projectId = "" } = useParams(),
+  const owned = useOwnedData();
+  const { projectId, episodeId: routeEpisodeId } = useParams();
+  const [params] = useSearchParams();
+  const data = useStore((state) => state.data);
+  const episodeId = routeEpisodeId ?? params.get("episode") ?? undefined;
+  const episode = data.episodes[episodeId ?? ""];
+  if (
+    episodeId &&
+    (!episode ||
+      episode.archived ||
+      episode.projectId !== projectId ||
+      !data.projects[projectId ?? ""]?.episodeIds.includes(episodeId))
+  )
+    return <div className="st-empty">Episode unavailable.</div>;
+  return owned ? (
+    <ServerLibrary
+      episodeId={episodeId}
+      allowedAssetIds={
+        episodeId ? episodeMediaAssetIds(data, episodeId) : undefined
+      }
+    />
+  ) : (
+    <LocalLibraryWorkspace />
+  );
+}
+function LocalLibraryWorkspace() {
+  const { projectId = "", episodeId: routeEpisodeId } = useParams(),
     d = useStore((s) => s.data),
     keys = useSelection((s) => s.keys),
     modal = useActions(),
     [params, setParams] = useSearchParams(),
     [query, setQuery] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [scope, setScope] = useState("");
+  const availableProjects = Object.values(d.projects).filter(
+    (p) => !p.archived && !p.unfiled,
+  );
+  const activeProject = projectId || scope;
+  const episodeId = routeEpisodeId ?? params.get("episode") ?? undefined;
+  const episode = d.episodes[episodeId ?? ""];
+  const episodeAssets = episodeId
+    ? episodeMediaAssetIds(d, episodeId)
+    : undefined;
   const upload = useRef<HTMLInputElement>(null);
   const filter = params.get("filter") ?? "all";
   const assets = Object.values(d.assets).filter(
     (a) =>
-      a.projectId === projectId &&
+      (!activeProject || a.projectId === activeProject) &&
+      (!episodeAssets || episodeAssets.has(a.id)) &&
       (filter === "archive" ? a.archived : !a.archived) &&
       (filter === "all" || filter === "archive" || a.kind === filter) &&
       a.title.toLowerCase().includes(query.toLowerCase()),
   );
   const selected = keys.at(-1)?.startsWith("asset:")
-    ? d.assets[keys.at(-1)!.slice(6)]
+    ? assets.find((asset) => asset.id === keys.at(-1)!.slice(6))
     : undefined;
-  useEffect(() => useSelection.getState().replace([]), [projectId]);
+  useEffect(() => useSelection.getState().replace([]), [projectId, episodeId]);
   const commands = useMemo<StudioCommand[]>(
     () => [
       {
         id: "library.upload",
         label: "Upload media",
-        run: () => upload.current?.click(),
+        run: () => {
+          if (activeProject) upload.current?.click();
+        },
       },
       {
         id: "library.archive",
@@ -93,60 +140,64 @@ export function LibraryWorkspace() {
           ),
       },
     ],
-    [projectId],
+    [activeProject],
   );
   useRegisterCommands("library", commands);
-  if (!d.projects[projectId])
+  if (projectId && !d.projects[projectId])
     return <div className="st-empty">Project unavailable</div>;
   return (
-    <div className="st-project-page">
-      <header className="st-scope-header">
-        <span>{d.projects[projectId].title}</span>
-        <h1>Library</h1>
+    <div className="library-page">
+      <header className="library-heading">
+        <h1>{episodeId ? "Media" : "Library"}</h1>
+        {episode && (
+          <p className="st-muted">
+            {d.projects[episode.projectId].title} / {episode.title}
+          </p>
+        )}
       </header>
-      <div className="st-library-layout">
-        <section className="st-library-main">
-          <header className="st-library-toolbar">
-            <nav aria-label="Media filters">
-              {[
-                { id: "all", name: "All" },
-                { id: "image", name: "Images" },
-                { id: "video", name: "Video" },
-                { id: "audio", name: "Audio" },
-                { id: "renders", name: "Renders" },
-                { id: "archive", name: "Archive" },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  aria-pressed={filter === f.id}
-                  onClick={() => setParams({ filter: f.id })}
-                >
-                  {f.name}
-                </button>
-              ))}
-            </nav>
-            <button
-              className="st-button st-mobile-details"
-              onClick={() => setShowDetails(true)}
-            >
-              Details
-            </button>
-            <input
-              aria-label="Search library"
-              placeholder="Search media"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <button
-              className="st-button"
-              onClick={() => upload.current?.click()}
-            >
-              <Upload size={13} />
-              Upload
-            </button>
-          </header>
+      <div className="library-layout">
+        <section className="library-main">
+          {!projectId && (
+            <label className="ds-library-scope">
+              Production
+              <select
+                aria-label="Library production"
+                value={scope}
+                onChange={(e) => {
+                  setScope(e.target.value);
+                  useSelection.getState().replace([]);
+                }}
+              >
+                <option value="">All productions</option>
+                {availableProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <LibraryToolbar
+            query={query}
+            onQuery={setQuery}
+            filter={filter}
+            onFilter={(filter) => {
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.set("filter", filter);
+                return next;
+              });
+            }}
+            onUpload={() => upload.current?.click()}
+            uploadDisabled={!activeProject}
+            uploadHint={
+              !activeProject
+                ? "Choose a production before uploading"
+                : undefined
+            }
+          />
           <SelectionSurface
-            className="st-panel-scroll st-library-grid-wrap"
+            className="library-grid-wrap"
             aria-label="Library cards"
           >
             {filter === "renders" ? (
@@ -162,11 +213,18 @@ export function LibraryWorkspace() {
                     }}
                   >
                     <option value="">New export…</option>
-                    {d.projects[projectId].episodeIds.map((id) => (
-                      <option key={id} value={id}>
-                        {d.episodes[id].title}
-                      </option>
-                    ))}
+                    {Object.values(d.episodes)
+                      .filter(
+                        (ep) =>
+                          !ep.archived &&
+                          (!episodeId || ep.id === episodeId) &&
+                          (!activeProject || ep.projectId === activeProject),
+                      )
+                      .map(({ id }) => (
+                        <option key={id} value={id}>
+                          {d.episodes[id].title}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <p className="st-muted">
@@ -177,7 +235,10 @@ export function LibraryWorkspace() {
                   {Object.values(d.exports)
                     .filter(
                       (r) =>
-                        d.episodes[r.episodeId]?.projectId === projectId &&
+                        (!episodeId || r.episodeId === episodeId) &&
+                        (!activeProject ||
+                          d.episodes[r.episodeId]?.projectId ===
+                            activeProject) &&
                         r.title.toLowerCase().includes(query.toLowerCase()),
                     )
                     .map((r) => (
@@ -200,7 +261,7 @@ export function LibraryWorkspace() {
                 </div>
               </>
             ) : (
-              <div className="st-library-grid">
+              <div className="library-grid">
                 {assets.map((a) => (
                   <CommandMenu
                     ids={[
@@ -214,85 +275,94 @@ export function LibraryWorkspace() {
                         useSelection.getState().replace([`asset:${a.id}`]);
                     }}
                   >
-                    <article
-                      className={`st-media-card ${keys.includes(`asset:${a.id}`) ? "is-selected" : ""}`}
-                      data-selection-key={`asset:${a.id}`}
-                      aria-label={`Media ${a.title}`}
-                      tabIndex={0}
-                      onClick={(e) =>
+                    <LibraryCard
+                      title={a.title}
+                      kind={a.kind}
+                      {...describeLibraryAsset(d, a)}
+                      missing={a.missing}
+                      selected={keys.includes(`asset:${a.id}`)}
+                      selectionKey={`asset:${a.id}`}
+                      onSelect={(event) =>
                         useSelection.getState().choose(
                           `asset:${a.id}`,
-                          assets.map((a) => `asset:${a.id}` as EntityKey),
-                          e,
+                          assets.map(
+                            (asset) => `asset:${asset.id}` as EntityKey,
+                          ),
+                          event,
                         )
                       }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter")
-                          useSelection.getState().choose(
-                            `asset:${a.id}`,
-                            assets.map((a) => `asset:${a.id}` as EntityKey),
-                            e,
-                          );
+                      onOpen={() => {
+                        useSelection.getState().replace([`asset:${a.id}`]);
+                        setShowDetails(true);
                       }}
-                    >
-                      <div>
-                        {a.kind === "image" && a.url && !a.missing ? (
-                          <img src={a.url} alt="" loading="lazy" />
-                        ) : a.kind === "audio" ? (
-                          <Music size={25} />
-                        ) : a.kind === "video" ? (
-                          <FileVideo size={25} />
+                      archived={a.archived}
+                      onArchive={() =>
+                        commit(
+                          (data) =>
+                            archiveWorkspaceAssets(data, [a.id], !a.archived),
+                          a.archived
+                            ? "Media restored"
+                            : "Media archived · Undo to restore",
+                        )
+                      }
+                      media={
+                        a.url && !a.missing ? (
+                          a.kind === "image" ? (
+                            <img src={a.url} alt="" loading="lazy" />
+                          ) : a.kind === "video" ? (
+                            <video
+                              src={a.url}
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                          ) : (
+                            <Music size={40} />
+                          )
                         ) : (
-                          <ImageIcon size={25} />
-                        )}
-                      </div>
-                      <b>{a.title}</b>
-                      <small>{a.provenance}</small>
-                      <span>
-                        {assetUsages(d, a.id).length} shots ·{" "}
-                        {a.missing
-                          ? "Needs update"
-                          : a.kind === "video"
-                            ? "Video"
-                            : "Still"}
-                      </span>
-                    </article>
+                          <ImageIcon size={40} />
+                        )
+                      }
+                    />
                   </CommandMenu>
                 ))}
+                {!assets.length && (
+                  <div className="library-empty">
+                    <ImageIcon size={32} />
+                    <h2>
+                      {query
+                        ? "No matching media"
+                        : filter === "archive"
+                          ? "No archived media"
+                          : "No media yet"}
+                    </h2>
+                    <p>
+                      {query
+                        ? "Try another search or media type."
+                        : "Upload media or generate a starting frame to build your library."}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </SelectionSurface>
         </section>
-        <aside
-          className={`st-world-inspector ${showDetails ? "is-mobile-open" : ""}`}
-        >
-          <header>
-            <b>Media inspector</b>
-            <button
-              className="st-icon st-mobile-details"
-              aria-label="Close media inspector"
-              onClick={() => setShowDetails(false)}
-            >
-              ×
-            </button>
-          </header>
-          <div className="st-panel-scroll">
-            {selected ? (
-              <RegisteredInspectorSections
-                type="asset"
-                id={selected.id}
-                projectId={projectId}
-              />
-            ) : (
-              <section>
-                <p className="st-muted">
-                  Select media to inspect its source and usage.
-                </p>
-              </section>
-            )}
-          </div>
-        </aside>
       </div>
+      <Dialog open={showDetails && !!selected} onOpenChange={setShowDetails}>
+        <DialogContent className="st-dialog library-details">
+          <DialogTitle>{selected?.title ?? "Media details"}</DialogTitle>
+          <DialogDescription>
+            Preview, rename, and find where this media is used.
+          </DialogDescription>
+          {selected && (
+            <RegisteredInspectorSections
+              type="asset"
+              id={selected.id}
+              projectId={selected.projectId}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <input
         hidden
         ref={upload}
@@ -300,6 +370,7 @@ export function LibraryWorkspace() {
         multiple
         accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/mpeg,audio/wav,audio/ogg"
         onChange={(e) => {
+          if (!activeProject) return;
           for (const file of Array.from(e.target.files ?? [])) {
             if (file.size > CONFIG.maxUploadBytes) {
               useStore.getState().setNotice("Choose files under 20 MB.");
@@ -307,17 +378,16 @@ export function LibraryWorkspace() {
             }
             const url = URL.createObjectURL(file);
             if (
-              !commit(
-                (data) =>
-                  importWorkspaceAsset(
-                    data,
-                    projectId,
-                    file.name,
-                    file.type,
-                    url,
-                  ),
-                "Media imported · session only",
-              )
+              !commit((data) => {
+                const id = importWorkspaceAsset(
+                  data,
+                  activeProject,
+                  file.name,
+                  file.type,
+                  url,
+                );
+                if (episodeId) attachEpisodeMedia(data, episodeId, id);
+              }, "Media imported · session only")
             )
               URL.revokeObjectURL(url);
           }
@@ -329,10 +399,15 @@ export function LibraryWorkspace() {
 }
 
 function AssetDetails({ id, projectId }: { id: string; projectId: string }) {
+  const { episodeId: routeEpisodeId } = useParams();
+  const [params] = useSearchParams();
+  const episodeId = routeEpisodeId ?? params.get("episode");
   const d = useStore((s) => s.data),
     selected = d.assets[id],
     navigate = useNavigate(),
-    usages = assetUsages(d, id);
+    usages = assetUsages(d, id).filter(
+      (shot) => !episodeId || d.scenes[shot.sceneId]?.episodeId === episodeId,
+    );
   if (!selected) return null;
   return (
     <section>

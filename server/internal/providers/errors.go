@@ -7,6 +7,8 @@ import (
 )
 
 var (
+	ErrUncertain = errors.New("provider submission outcome is unknown")
+	ErrQuota     = errors.New("provider quota or submission budget exhausted")
 	// ErrRejected means the provider refused the request itself (content
 	// policy, invalid parameters). Retrying the same request will not help.
 	ErrRejected = errors.New("provider rejected the request")

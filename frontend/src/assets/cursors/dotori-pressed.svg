@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="19.6" height="23.52" viewBox="0 0 64 80">
+ <defs>
+  <linearGradient id="fill" x1=".15" y1="0" x2=".8" y2="1" gradientUnits="objectBoundingBox">
+   <stop stop-color="#ff5a72"/><stop offset=".35" stop-color="#ff993b"/><stop offset=".65" stop-color="#ffb300"/><stop offset="1" stop-color="#f00075"/>
+  </linearGradient>
+  <linearGradient id="rim" x2=".7" y2="1"><stop stop-color="#fff1b4"/><stop offset=".5" stop-color="#ffe475"/><stop offset="1" stop-color="#ff278d"/></linearGradient>
+  <linearGradient id="sheen" x2=".7" y2="1"><stop stop-color="#fff" stop-opacity=".26"/><stop offset=".65" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <filter id="glow" x="-40%" y="-30%" width="180%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+ </defs>
+ <path d="M12 19C12 10 18 7 24 13L54 43C61 50 58 57 50 58L36 60C32 60 30 62 27 65L22 71C17 77 12 74 12 66Z" fill="#ff663a" opacity="0.6" filter="url(#glow)"/>
+ <path d="M12 19C12 10 18 7 24 13L54 43C61 50 58 57 50 58L36 60C32 60 30 62 27 65L22 71C17 77 12 74 12 66Z" fill="url(#fill)" stroke="url(#rim)" stroke-width="3" stroke-linejoin="round"/>
+ <path d="M12 19C12 10 18 7 24 13L54 43C61 50 58 57 50 58L36 60C32 60 30 62 27 65L22 71C17 77 12 74 12 66Z" fill="url(#sheen)"/>
+</svg>

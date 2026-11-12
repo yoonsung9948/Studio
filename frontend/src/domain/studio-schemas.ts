@@ -1,3 +1,9 @@
+import {
+  cameraSpeeds,
+  actionTimings,
+  performanceTones,
+  gazeDirections,
+} from "./video-direction";
 import { z } from "zod";
 const id = z.string();
 const map = <T extends z.ZodType>(x: T) => z.record(id, x);
@@ -6,11 +12,14 @@ export const studioOperation = z.enum([
   "reference",
   "look",
   "location",
+  "prop",
 ]);
 export const referenceType = z.enum([
   "front",
   "three_quarter",
   "profile",
+  "right_profile",
+  "back",
   "full_body",
   "full_body_three_quarter",
   "custom",
@@ -35,6 +44,29 @@ export const snapshotSchema = z.object({
   referenceVersionIds: z.array(id),
 });
 export const generationPreferencesSchema = z.object({
+  craft: z
+    .object({
+      lens: z.enum(["24 mm", "35 mm", "50 mm", "85 mm"]),
+      angle: z.enum(["Eye level", "Low angle", "High angle"]),
+      lighting: z.enum([
+        "Warm practical",
+        "Cool window",
+        "Soft daylight",
+        "Hard sidelight",
+      ]),
+      focus: z.enum(["Shallow", "Deep"]),
+      cameraSpeed: z.enum(cameraSpeeds).optional(),
+      actionTiming: z.enum(actionTimings).optional(),
+      performanceTone: z.enum(performanceTones).optional(),
+      gazeDirection: z.enum(gazeDirections).optional(),
+      environmentMotion: z.string().max(1500).optional(),
+      endingBeat: z.string().max(1500).optional(),
+      motionStrength: z.number().min(0).max(100),
+      easing: z.enum(["Linear", "Ease in", "Ease out", "Ease in / out"]),
+      negativePrompt: z.string().max(2000),
+      seed: z.number().int().nonnegative().max(2147483647).optional(),
+    })
+    .optional(),
   videoMode: z.enum(["direct", "image_first"]).optional(),
   startingFrameAssetId: id.optional(),
   endingFrameAssetId: id.optional(),
@@ -56,11 +88,19 @@ export const generationPreferencesSchema = z.object({
   model: z.literal("demo"),
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]),
 });
-export const generationOverrideSchema = generationPreferencesSchema.extend({
+export const generationContextSchema = generationPreferencesSchema.extend({
   locationMode: z.enum(["none", "inferred", "selected", "required"]),
   locationId: id.optional(),
 });
-export const generationInputSchema = generationOverrideSchema.extend({
+export const generationOverrideSchema = generationContextSchema
+  .partial()
+  .extend({
+    craft: generationPreferencesSchema.shape.craft
+      .unwrap()
+      .partial()
+      .optional(),
+  });
+export const generationInputSchema = generationContextSchema.extend({
   sourceScript: z.string().optional(),
   sceneDescription: z.string().optional(),
   episodeStyle: z.string().optional(),
@@ -87,6 +127,8 @@ export const generationInputSchema = generationOverrideSchema.extend({
 export const studioSchema = z.object({
   looks: map(
     z.object({
+      episodeId: id.optional(),
+      sourceLookId: id.optional(),
       id,
       characterId: id,
       name: id,
@@ -113,6 +155,7 @@ export const studioSchema = z.object({
       id,
       projectId: id,
       ownerKind: studioOperation,
+      viewType: id.optional(),
       ownerId: id,
       assetId: id,
       approval: z.enum(["needs_review", "approved", "rejected"]),
@@ -131,6 +174,8 @@ export const studioSchema = z.object({
       description: id,
       primaryVersionId: id.optional(),
       assetId: id.optional(),
+      savedViewIds: z.record(id, id).optional(),
+      sourceAssetId: id.optional(),
       referenceAssetIds: z.array(id),
       revision: z.number(),
     }),
@@ -138,6 +183,8 @@ export const studioSchema = z.object({
   setups: map(
     z.object({
       sceneId: id,
+      worldElementIds: z.array(id).optional(),
+      soundNotes: z.string().max(2000).optional(),
       generation: generationPreferencesSchema.optional(),
       cast: z.array(castSchema),
       locationMode: z.enum(["none", "inferred", "selected", "required"]),

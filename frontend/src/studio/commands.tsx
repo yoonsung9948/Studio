@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { useStudio } from "./selection";
+import { useStudio, useSelection } from "./selection";
 export interface StudioCommand {
   id: string;
   label: string;
@@ -185,29 +185,39 @@ export function CommandMenu({
   ids,
   children,
   onSelect,
+  className = "",
 }: {
   ids: string[];
   children: ReactNode;
   onSelect?: () => void;
+  className?: string;
 }) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     null,
   );
   const { commands, execute } = useCommands();
+  const selected = useSelection((s) => s.keys);
+  const menuIds = selected.length
+    ? [...new Set([...ids, "selection.delete"])]
+    : ids;
   return (
     <div
-      className="st-context-target"
+      className={`st-context-target ${className}`}
       onKeyDown={(e) => {
         if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
           e.preventDefault();
+          e.stopPropagation();
           onSelect?.();
+          if (!ids.length && !useSelection.getState().keys.length) return;
           const r = (e.target as HTMLElement).getBoundingClientRect();
           setPosition({ x: r.left + 20, y: r.top + 20 });
         }
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         onSelect?.();
+        if (!ids.length && !useSelection.getState().keys.length) return;
         setPosition({ x: e.clientX, y: e.clientY });
       }}
     >
@@ -226,11 +236,15 @@ export function CommandMenu({
           style={{ left: position?.x, top: position?.y }}
         />
         <DropdownMenuContent>
-          {ids.map((id) => {
+          {menuIds.map((id) => {
             const c = commands.find((c) => c.id === id);
             return (
               c && (
-                <DropdownMenuItem key={id} onSelect={() => execute(id)}>
+                <DropdownMenuItem
+                  key={id}
+                  className={`dropdown-item ${id === "selection.delete" ? "st-menu-delete" : ""}`}
+                  onSelect={() => execute(id)}
+                >
                   {c.label}
                   {c.shortcut && (
                     <small>{c.shortcut.replace("Mod", "⌘")}</small>

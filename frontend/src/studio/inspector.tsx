@@ -360,11 +360,13 @@ function ShotProperties({ id, projectId }: { id: string; projectId: string }) {
                   }
                 >
                   <option value="">Identity</option>
-                  {characterLooks(d, c.id).map((l) => (
-                    <option value={l.id} key={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
+                  {characterLooks(d, c.id, d.scenes[s.sceneId].episodeId).map(
+                    (l) => (
+                      <option value={l.id} key={l.id}>
+                        {l.name}
+                      </option>
+                    ),
+                  )}
                 </select>
               )}
             </div>

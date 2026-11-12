@@ -52,3 +52,7 @@ go.work.sum
 
 # Go coverage files
 *.out
+# Share development defaults without tracking local environment files.
+!server/.env.example
+
+!frontend/.env.example

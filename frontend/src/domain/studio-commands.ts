@@ -1,3 +1,4 @@
+import { effectiveWorldElements, generationInputs } from "./generation-inputs";
 import {
   CONFIG,
   uid,
@@ -123,6 +124,21 @@ export function updateLook(
   bumpStudio(d, d.characters[l.characterId].projectId);
 }
 export function targetInfo(d: Data, kind: StudioOperation, id: string) {
+  if (kind === "prop") {
+    const project = Object.values(d.projects).find((p) =>
+      p.worldElements?.some((e) => e.kind === "prop" && e.id === id),
+    );
+    const prop = project?.worldElements?.find((e) => e.id === id);
+    if (!project || !prop) throw Error("Prop no longer exists.");
+    return {
+      projectId: project.id,
+      name: prop.name,
+      revision: prop.revision ?? 1,
+      identity: undefined,
+      spec: prop.description,
+      characterId: undefined,
+    };
+  }
   if (kind === "identity") {
     const c = d.characters[id];
     if (!c) throw Error("Character no longer exists.");
@@ -142,6 +158,7 @@ export function targetInfo(d: Data, kind: StudioOperation, id: string) {
     return {
       projectId: c.projectId,
       name: `${c.name} / ${l.name}`,
+      episodeId: l.episodeId,
       revision: l.revision,
       identity: c.canonicalVersionId,
       spec: l.description + "\n" + l.styling,
@@ -155,6 +172,7 @@ export function targetInfo(d: Data, kind: StudioOperation, id: string) {
     return {
       projectId: c.projectId,
       name: `${c.name} / ${r.type}`,
+      episodeId: r.lookId ? d.studio.looks[r.lookId]?.episodeId : undefined,
       revision: c.revision ?? 1,
       identity: c.canonicalVersionId,
       spec: r.type,
@@ -182,11 +200,12 @@ export function enqueueStudio(
   kind: StudioOperation,
   ids: string[],
   simulateFailure = false,
+  options?: { count?: number; specification?: string; viewType?: string },
 ) {
   const eligible = [...new Set(ids)].filter((id) => !targetBusy(d, kind, id));
   const infos = eligible.map((id) => targetInfo(d, kind, id));
   for (const info of infos) {
-    if (kind === "identity" && !info.spec.trim())
+    if (kind === "identity" && !(options?.specification ?? info.spec).trim())
       throw Error(
         "Describe the physical appearance before generating identity candidates.",
       );
@@ -195,7 +214,10 @@ export function enqueueStudio(
       !validVersion(d, info.identity)
     )
       throw Error("Approve the character identity first.");
-    if (kind === "look" && !info.spec.split("\n")[0].trim())
+    if (
+      kind === "look" &&
+      !(options?.specification ?? info.spec).split("\n")[0].trim()
+    )
       throw Error("Describe this Look before generation.");
   }
   if (kind === "reference")
@@ -204,7 +226,11 @@ export function enqueueStudio(
       if (r.lookId && !lookReady(d, r.lookId))
         throw Error("Approve the Look before generating its additional angle.");
     }
-  const total = eligible.length * studioCost(kind);
+  const count = options?.count ?? (kind === "identity" ? 3 : 1);
+  if (!Number.isInteger(count) || count < 1 || count > 4)
+    throw Error("Choose between one and four images.");
+  const cost = count * CONFIG.imageCost;
+  const total = eligible.length * cost;
   if (d.credits < total) throw Error("Not enough demo credits.");
   eligible.forEach((id, i) => {
     const info = infos[i];
@@ -215,19 +241,21 @@ export function enqueueStudio(
     d.jobs[jid] = {
       id: jid,
       projectId: info.projectId,
-      episodeId: "",
+      episodeId: "episodeId" in info ? (info.episodeId ?? "") : "",
       sceneId: "",
       shotId: "",
       operation: kind,
       target: { kind, id },
       state: "queued",
       attempt: Math.max(0, ...prior.map((j) => j.attempt)) + 1,
-      cost: studioCost(kind),
+      cost,
+      outputCount: count,
       progress: 0,
       revision: info.revision,
       sourceIdentityVersionId: info.identity,
       sourceLookVersionId: "sourceLook" in info ? info.sourceLook : undefined,
-      specification: info.spec,
+      specification: options?.specification ?? info.spec,
+      viewType: options?.viewType,
       replacement: true,
       simulateFailure,
     };
@@ -251,7 +279,7 @@ export function completeStudioJob(d: Data, id: string) {
     j.error = "Demo interruption. Retry creates a fresh recoverable attempt.";
     return;
   }
-  const count = kind === "identity" ? 3 : 1;
+  const count = j.outputCount ?? (kind === "identity" ? 3 : 1);
   j.outputVersionIds = [];
   for (let i = 0; i < count; i++) {
     const aid = uid("asset"),
@@ -263,7 +291,9 @@ export function completeStudioJob(d: Data, id: string) {
           ? `/media/studio-look-${/summer|white T-shirt/i.test(j.specification ?? "") ? "summer" : /formal|suit/i.test(j.specification ?? "") ? "formal" : /winter|coat/i.test(j.specification ?? "") ? "winter" : "default"}.svg`
           : kind === "location"
             ? "/media/arrival.svg"
-            : `/media/studio-${d.studio.references[targetId]?.type ?? "custom"}.svg`;
+            : kind === "prop"
+              ? "/media/director-desk/letter.png"
+              : `/media/studio-${["right_profile", "back"].includes(d.studio.references[targetId]?.type) ? "custom" : (d.studio.references[targetId]?.type ?? "custom")}.svg`;
     d.assets[aid] = {
       id: aid,
       projectId: j.projectId,
@@ -277,6 +307,7 @@ export function completeStudioJob(d: Data, id: string) {
       id: vid,
       projectId: j.projectId,
       ownerKind: kind,
+      viewType: j.viewType,
       ownerId: targetId,
       assetId: aid,
       approval: "needs_review",
@@ -303,6 +334,7 @@ export function approveVersion(d: Data, id: string) {
   if (
     v.ownerKind !== "identity" &&
     v.ownerKind !== "location" &&
+    v.ownerKind !== "prop" &&
     v.sourceIdentityVersionId !== info.identity
   )
     throw Error("The canonical identity changed. Generate a new candidate.");
@@ -356,13 +388,35 @@ export function approveVersion(d: Data, id: string) {
           .map((s) => s.id),
       );
     r.activeVersionId = v.id;
+  } else if (v.ownerKind === "prop") {
+    const prop = d.projects[v.projectId].worldElements?.find(
+      (e) => e.id === v.ownerId,
+    );
+    if (!prop) throw Error("Prop unavailable.");
+    if (prop.primaryVersionId !== v.id)
+      markShotsStale(
+        d,
+        Object.values(d.shots)
+          .filter((shot) =>
+            effectiveWorldElements(d, shot.sceneId, shot.id).includes(prop.id),
+          )
+          .map((shot) => shot.id),
+      );
+    prop.primaryVersionId = v.id;
+    prop.assetId = v.assetId;
   } else {
     const l = d.studio.locations[v.ownerId];
     l.primaryVersionId = v.id;
     l.assetId = v.assetId;
-    for (const setup of Object.values(d.studio.setups))
-      if (setup.locationId === l.id)
-        markShotsStale(d, d.scenes[setup.sceneId].shotIds);
+    markShotsStale(
+      d,
+      Object.values(d.shots)
+        .filter(
+          (shot) =>
+            generationInputs(d, shot.sceneId, shot.id).locationId === l.id,
+        )
+        .map((shot) => shot.id),
+    );
   }
   bumpStudio(d, v.projectId);
 }
@@ -382,6 +436,12 @@ export function setSceneCast(d: Data, sid: string, cast: CastAssignment[]) {
     if (seen.has(a.characterId))
       throw Error("This character is already assigned.");
     seen.add(a.characterId);
+    if (
+      a.lookId &&
+      d.studio.looks[a.lookId]?.episodeId &&
+      d.studio.looks[a.lookId].episodeId !== sc.episodeId
+    )
+      throw Error("Choose a look from this episode.");
     if (a.lookId && d.studio.looks[a.lookId]?.characterId !== a.characterId)
       throw Error("The selected Look belongs to another character.");
   }

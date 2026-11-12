@@ -1,0 +1,1197 @@
+/* Episode board and scene planning share production references and the global studio shell. */
+.episode-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 386px;
+  height: 100%;
+  min-height: 0;
+}
+.episode-board-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+.episode-board-heading {
+  flex-shrink: 0;
+  padding: 20px 16px 0 20px;
+}
+.episode-board-heading h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.35;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+}
+.episode-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  min-height: 54px;
+}
+.episode-board-toolbar nav {
+  display: flex;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 7px;
+}
+.episode-board-toolbar nav button {
+  padding: 0 24px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.episode-board-toolbar nav button[aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 550;
+}
+.episode-board-actions {
+  transform: translateY(-8px);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 7px;
+}
+.episode-board-actions .st-button {
+  min-height: 40px;
+  font-size: 13px;
+  padding: 0 17px;
+}
+.episode-scene-columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(290px, 1fr);
+  gap: 15px;
+  padding: 14px 16px 34px 20px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+.episode-scene-column {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  min-width: 0;
+  min-height: 100%;
+  overflow: hidden;
+}
+.episode-scene-column.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.episode-scene-cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 144px;
+  flex-shrink: 0;
+  padding: 0;
+  background: var(--raised);
+  border: 0;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.episode-scene-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.episode-scene-cover::after {
+  content: "";
+  position: absolute;
+  inset: 30% 0 0;
+  background: linear-gradient(transparent, #000c);
+  pointer-events: none;
+}
+.episode-scene-cover > span {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 13px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-size: 16px;
+  text-align: left;
+}
+.episode-scene-cover strong {
+  font-weight: 550;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.episode-scene-cover b {
+  font-size: 20px;
+  font-weight: 450;
+}
+.episode-scene-cover time {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.episode-scene-shots {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px 6px 12px;
+}
+.episode-scene-column > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  font-size: 14px;
+}
+.episode-scene-column > footer b {
+  font-weight: 450;
+}
+.studio-layout .st-shot.sb-shot {
+  position: relative;
+  display: flex;
+  padding: 3px;
+  min-height: 103px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  min-width: 0;
+  overflow: hidden;
+}
+.studio-layout .st-shot.sb-shot.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sb-shot-thumbnail {
+  width: 123px;
+  flex: 0 0 42%;
+  min-width: 0;
+  position: relative;
+  min-height: 96px;
+  overflow: hidden;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: var(--raised);
+}
+.sb-shot-thumbnail img,
+.sb-shot-thumbnail video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sb-shot-copy {
+  padding: 8px 5px 7px 12px;
+  min-width: 0;
+  flex: 1;
+  position: relative;
+}
+.sb-shot-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.sb-shot-heading > span {
+  flex-shrink: 0;
+}
+.sb-shot-heading b {
+  flex: 1;
+  min-width: 0;
+  font-weight: 450;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-shot-heading button {
+  align-self: start;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  width: 21px;
+  height: 23px;
+}
+.sb-shot-copy > small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sb-shot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.sb-shot-status svg {
+  flex-shrink: 0;
+  fill: var(--subtle);
+  stroke: var(--subtle);
+}
+.sb-shot-status.success {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 25%, var(--border));
+}
+.sb-shot-status.success svg {
+  fill: var(--green);
+  stroke: var(--bg);
+  background: var(--green);
+  padding: 2px;
+  border-radius: 50%;
+}
+.sb-shot-status.blue {
+  color: #57b5f4;
+  border-color: #246087;
+}
+.sb-shot-status.blue svg {
+  fill: #57b5f4;
+  stroke: #57b5f4;
+}
+.sb-shot-status.amber {
+  color: var(--accent);
+}
+.sb-shot-status.amber svg {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.sb-shot-status.error {
+  color: var(--danger);
+}
+.sb-quick-generate {
+  position: absolute;
+  right: 3px;
+  bottom: 6px;
+  background: var(--surface);
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  opacity: 0;
+}
+.sb-shot:hover .sb-quick-generate,
+.sb-shot:focus-within .sb-quick-generate {
+  opacity: 1;
+}
+.episode-board-sidebar {
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  overflow: auto;
+}
+.episode-board-sidebar > .dd-controls {
+  border-left: 0;
+  min-height: 100%;
+}
+.episode-board-sidebar > .st-inspector {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+.episode-board-outline {
+  position: absolute;
+  left: 12px;
+  top: 132px;
+  bottom: 15px;
+  width: 300px;
+  z-index: 7;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+  overflow: auto;
+}
+.episode-board-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 35px;
+  color: var(--muted);
+  text-align: center;
+}
+.episode-empty-shot {
+  margin: 3px 0;
+  padding: 18px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.episode-scene-details .scene-overview-panel > h2 {
+  display: none;
+}
+.episode-scene-details-toggle {
+  display: none;
+}
+.scene-overview-panel {
+  gap: 15px;
+  padding: 18px;
+  padding-bottom: 32px;
+}
+.scene-overview-panel > h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.scene-overview-intro > img {
+  width: 100%;
+  height: 104px;
+  object-fit: cover;
+  border-radius: 5px;
+  object-position: center 20%;
+}
+.scene-overview-intro > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 7px;
+}
+.scene-overview-intro h3 {
+  font-size: 17px;
+  font-weight: 550;
+  flex: 1;
+  margin: 0;
+}
+.scene-overview-intro b,
+.scene-overview-intro time {
+  font-size: 15px;
+  font-weight: 450;
+}
+.scene-overview-intro p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+.scene-overview-panel .dd-foundation {
+  margin: 0;
+}
+.scene-overview-panel .dd-foundation > header {
+  margin-bottom: 7px;
+}
+.scene-overview-panel .dd-foundation h3 {
+  font-size: 15px;
+}
+.scene-overview-panel .dd-cast-card > img {
+  aspect-ratio: 1.3;
+}
+.scene-overview-panel .dd-foundation-card > img {
+  height: 65px;
+}
+.scene-overview-panel .ds-field {
+  margin: 0;
+  gap: 6px;
+  position: relative;
+}
+.scene-overview-panel .ds-field textarea {
+  padding: 9px 11px;
+  font-size: 14px;
+  height: 54px;
+  min-height: 54px;
+  padding-bottom: 18px;
+}
+.scene-overview-panel .dd-inspector-continue {
+  margin-top: auto;
+  min-height: 47px;
+  font-size: 16px;
+}
+.scene-continuity-count {
+  display: block;
+  text-align: right;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: -4px;
+}
+.scene-readiness h3 {
+  font-size: 15px;
+  font-weight: 550;
+  margin: 0 0 5px;
+}
+.scene-readiness p {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 5px 0;
+  font-size: 13px;
+}
+.scene-readiness svg {
+  color: var(--subtle);
+  flex-shrink: 0;
+}
+.scene-readiness .is-complete svg {
+  color: var(--bg);
+  background: var(--green);
+  border-radius: 50%;
+  padding: 3px;
+}
+.scene-readiness .is-partial svg {
+  color: #57b5f4;
+  stroke-width: 4px;
+}
+.scene-readiness small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* Scene creation: outline, editor, and foundations each have their own scroll area. */
+.dd-workbench.dd-stage-scene {
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr) 386px;
+  grid-template-rows: 76px minmax(0, 1fr);
+}
+.dd-stage-scene .dd-scene-rail {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  width: auto;
+  padding: 22px 16px;
+}
+.dd-stage-scene .dd-work-body,
+.dd-stage-scene .dd-work-layout {
+  display: contents;
+}
+.dd-stage-scene .dd-stage-header {
+  position: static;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 76px;
+  min-height: 76px;
+  padding: 0 24px;
+}
+.dd-stage-scene .dd-stage-header nav {
+  gap: 11px;
+}
+.dd-stage-scene .dd-stage-header nav button {
+  font-size: 13px;
+  gap: 9px;
+  flex-direction: row;
+}
+.dd-stage-scene .dd-stage-header nav button:not(:last-child)::after {
+  display: block;
+  width: clamp(14px, 3.4vw, 58px);
+  margin-left: 3px;
+}
+.dd-stage-scene .dd-stage-header nav button > span {
+  width: 36px;
+  height: 36px;
+}
+.dd-stage-scene .dd-scene-planner {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 22px 24px;
+  min-height: 0;
+  overflow: auto;
+}
+.dd-stage-scene .dd-controls {
+  grid-column: 3;
+  grid-row: 1 / -1;
+  padding: 18px;
+  gap: 18px;
+  min-height: 0;
+  overflow: auto;
+}
+.dd-stage-scene .dd-rail-heading {
+  margin-bottom: 17px;
+}
+.dd-stage-scene .dd-rail-heading h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+.dd-stage-scene .dd-scene-nav {
+  margin-bottom: 16px;
+}
+.dd-stage-scene .dd-scene-nav > a > img {
+  aspect-ratio: 2;
+  display: block;
+}
+.dd-stage-scene .dd-scene-nav > a > span {
+  font-size: 15px;
+  padding: 9px;
+  gap: 9px;
+}
+.dd-stage-scene .dd-scene-nav time {
+  display: block;
+  font-size: 14px;
+}
+.dd-stage-scene .dd-back {
+  margin-top: 5px;
+}
+.dd-stage-scene .dd-scene-titlebar {
+  margin-bottom: 14px;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+.dd-stage-scene .dd-scene-titlebar .ds-editable-heading > input {
+  font-size: 30px;
+}
+.dd-stage-scene .dd-scene-titlebar .ds-button {
+  min-height: 40px;
+  font-size: 13px;
+  padding: 0 13px;
+  gap: 9px;
+}
+.dd-stage-scene .dd-scene-titlebar .dd-inline {
+  gap: 12px;
+}
+.dd-stage-scene .dd-scene-titlebar .ds-ai,
+.dd-stage-scene .dd-shot-plan-heading .ds-ai {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.dd-stage-scene .dd-screenplay {
+  margin-bottom: 23px;
+}
+.dd-stage-scene .dd-screenplay-heading {
+  min-height: 45px;
+  padding: 11px 16px;
+  font-size: 15px;
+}
+.dd-stage-scene .dd-screenplay-body {
+  min-height: 276px;
+}
+.dd-stage-scene .dd-screenplay textarea {
+  height: 276px;
+  min-height: 276px;
+  line-height: 26px;
+  padding: 18px 20px;
+  font-size: 14px;
+}
+.dd-stage-scene .dd-line-numbers {
+  min-width: 60px;
+  padding: 18px 20px;
+  font-size: 12px;
+  line-height: 26px;
+}
+.dd-stage-scene .dd-shot-plan-heading {
+  margin-bottom: 14px;
+  gap: 10px;
+}
+.dd-stage-scene .dd-shot-plan-heading h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.dd-stage-scene .dd-shot-plan-heading h2 small {
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 8px;
+  color: var(--muted);
+}
+.dd-stage-scene .dd-shot-plan-heading .ds-button {
+  min-height: 39px;
+  font-size: 13px;
+}
+.dd-stage-scene .dd-shot-plan {
+  margin: 0 -8px;
+  gap: 6px;
+}
+.dd-stage-scene .dd-plan-row {
+  gap: 8px;
+  padding: 4px 8px 4px 34px;
+  min-height: 94px;
+  grid-template-columns: 24px 96px 140px minmax(85px, 1fr) 120px 24px;
+}
+.dd-stage-scene .dd-plan-row .dd-plan-number {
+  font-size: 17px;
+}
+.dd-stage-scene .dd-plan-name > input {
+  font-size: 13px;
+}
+.dd-stage-scene .dd-plan-thumb {
+  display: grid;
+  aspect-ratio: 1.6;
+  width: 100%;
+}
+.dd-stage-scene .dd-plan-action {
+  grid-column: auto;
+  font-size: 12px;
+  min-height: 68px;
+  padding: 6px;
+  line-height: 1.6;
+}
+.dd-stage-scene .dd-plan-angle {
+  grid-column: auto;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+.dd-stage-scene .dd-plan-angle select {
+  min-height: 35px;
+  font-size: 13px;
+  padding: 0 9px;
+}
+.dd-stage-scene .dd-plan-row > .ds-icon {
+  grid-column: auto;
+  grid-row: auto;
+}
+.dd-stage-scene .dd-controls > h2 {
+  font-size: 23px;
+  font-weight: 600;
+  margin: 0;
+}
+.dd-stage-scene .dd-foundation {
+  margin: 0;
+  gap: 7px;
+}
+.dd-stage-scene .dd-foundation h3 {
+  font-size: 15px;
+  font-weight: 550;
+  margin: 0;
+}
+.dd-stage-scene .dd-foundation > header {
+  margin-bottom: 0;
+}
+.dd-stage-scene .dd-cast-card > img {
+  height: 119px;
+  aspect-ratio: auto;
+}
+.dd-stage-scene .dd-cast-card > span {
+  font-size: 14px;
+  padding: 8px 9px;
+  line-height: 20px;
+}
+.dd-stage-scene .dd-cast-card small {
+  font-size: 14px;
+  line-height: 18px;
+  margin-top: 0;
+}
+.dd-stage-scene .dd-foundation-card > img {
+  height: 86px;
+}
+.dd-stage-scene .dd-foundation-card label {
+  padding: 0 10px;
+  min-height: 40px;
+}
+.dd-stage-scene .dd-foundation-card select {
+  font-size: 14px;
+  min-height: 38px;
+  padding: 0;
+}
+.dd-stage-scene .dd-style-choices button {
+  font-size: 12px;
+}
+.dd-stage-scene .dd-style-preview {
+  height: 48px;
+}
+.dd-stage-scene .dd-controls > .ds-field {
+  margin: 0;
+  gap: 6px;
+  font-size: 15px;
+}
+.dd-stage-scene .dd-controls textarea {
+  min-height: 65px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.dd-stage-scene .dd-inspector-continue {
+  min-height: 48px;
+  font-size: 15px;
+  margin-top: auto;
+}
+.dd-stage-scene .dd-ai-panel {
+  gap: 18px;
+}
+.dd-stage-scene .dd-inspector-heading {
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.dd-stage-scene .dd-inspector-heading h2 {
+  font-size: 23px;
+  margin: 0;
+}
+.dd-stage-scene .dd-inspector-heading .ds-text {
+  font-size: 12px;
+  gap: 7px;
+  white-space: nowrap;
+}
+.dd-stage-scene .dd-ai-panel > p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.dd-stage-scene .dd-ai-panel .ds-field {
+  margin-top: 0;
+}
+.dd-stage-scene .dd-ai-panel .dd-locked-facts {
+  flex-wrap: nowrap;
+  gap: 9px;
+}
+.dd-stage-scene .dd-locked-facts span {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 10px;
+  overflow-wrap: anywhere;
+}
+.dd-stage-scene .dd-locked-facts svg {
+  flex-shrink: 0;
+}
+.dd-stage-scene .dd-ai-panel h3 {
+  font-size: 15px;
+  margin: 5px 0 8px;
+}
+.dd-stage-scene .dd-ai-panel pre {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+  padding: 12px;
+  max-height: 180px;
+}
+.dd-stage-scene .dd-ai-panel pre.dd-original-excerpt {
+  max-height: 100px;
+}
+.dd-stage-scene .dd-ai-panel .dd-proposal-copy {
+  color: var(--accent);
+  max-height: 225px;
+}
+.dd-proposal-caption {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.dd-proposal-source {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.dd-proposal-source summary {
+  cursor: pointer;
+}
+.dd-proposal-source[open] pre {
+  margin-top: 8px;
+}
+.dd-stage-scene .dd-ai-panel .dd-ai-disclosure {
+  font-size: 12px;
+  gap: 10px;
+}
+.dd-stage-scene .dd-ai-actions {
+  margin-top: 12px;
+  gap: 11px;
+}
+.dd-stage-scene .dd-ai-actions .ds-button {
+  min-height: 45px;
+  font-size: 14px;
+}
+.dd-stage-scene .dd-ai-actions .ds-text {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+.dd-stage-scene .dd-ai-actions > .ds-primary {
+  min-height: 49px;
+  font-size: 16px;
+}
+
+.scene-overview-intro h3 input {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+}
+.scene-overview-panel .scene-continuity-count {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  margin: 0;
+}
+
+.dd-stage-scene .scene-title-fit {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.65px;
+  line-height: 1.3;
+}
+.dd-stage-scene .scene-title-fit > span {
+  display: block;
+  visibility: hidden;
+  white-space: pre;
+  padding-right: 32px;
+  overflow: hidden;
+}
+.dd-stage-scene .scene-title-fit .ds-editable-heading {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+}
+.dd-stage-scene .scene-title-fit .ds-editable-heading > input {
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+}
+.dd-stage-scene .dd-rail-heading .ds-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--raised);
+  border: 0;
+}
+.dd-stage-scene .dd-scene-nav small {
+  font-size: 14px;
+}
+.dd-stage-scene .dd-plan-name label input {
+  width: 24px;
+  appearance: textfield;
+}
+.dd-stage-scene .dd-plan-name label input::-webkit-inner-spin-button,
+.dd-stage-scene .dd-plan-name label input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.dd-stage-scene .dd-scene-controls > .ds-field {
+  position: relative;
+}
+.dd-stage-scene .dd-scene-controls > .ds-field textarea {
+  height: 65px;
+  min-height: 65px;
+  padding-bottom: 18px;
+}
+.dd-stage-scene .dd-scene-controls .scene-continuity-count {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  margin: 0;
+}
+.scene-reference-placeholder {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  background: var(--raised);
+  font-size: 12px;
+}
+.scene-overview-panel .scene-reference-placeholder {
+  height: 65px;
+}
+
+.episode-sortable-shot {
+  position: relative;
+}
+.episode-sortable-shot > .drag-handle {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  z-index: 2;
+  opacity: 0;
+  background: #0d1419cc;
+  color: white;
+  padding: 3px;
+  border-radius: 4px;
+  touch-action: none;
+}
+.episode-sortable-shot:hover > .drag-handle,
+.episode-sortable-shot:focus-within > .drag-handle {
+  opacity: 1;
+}
+.dd-stage-scene .dd-scene-controls {
+  gap: 14px;
+  padding-bottom: 28px;
+}
+@media (max-width: 1450px) {
+  .episode-board {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .episode-board-toolbar {
+    flex-wrap: wrap;
+  }
+  .episode-board-toolbar nav button {
+    padding: 0 18px;
+    min-height: 48px;
+  }
+  .episode-board-actions {
+    margin-left: auto;
+  }
+  .dd-workbench.dd-stage-scene {
+    grid-template-columns: 220px minmax(0, 1fr) 340px;
+  }
+  .dd-stage-scene .dd-stage-header nav button:not(:last-child)::after {
+    width: 25px;
+  }
+  .dd-stage-scene .dd-plan-row {
+    gap: 6px;
+    padding-left: 30px;
+    grid-template-columns: 22px 80px 105px minmax(65px, 1fr) 100px 24px;
+  }
+  .dd-stage-scene .dd-scene-titlebar {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 1100px) {
+  .episode-board {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
+  .episode-board-sidebar {
+    display: none;
+  }
+  .episode-board-sidebar:has(> .st-inspector) {
+    display: block;
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(380px, 100%);
+    z-index: 9;
+    background: var(--bg);
+    box-shadow: var(--shadow);
+  }
+  .episode-scene-details-toggle {
+    display: inline-flex;
+    position: absolute;
+    right: 18px;
+    bottom: 15px;
+    z-index: 5;
+  }
+  .episode-scene-details {
+    width: min(420px, 95vw);
+    max-height: 92dvh;
+    overflow: auto;
+    padding: 20px 0;
+  }
+  .episode-scene-details .dd-controls {
+    border: 0;
+  }
+  .episode-scene-details > h2,
+  .episode-scene-details > p {
+    padding: 0 20px;
+  }
+  .dd-workbench.dd-stage-scene {
+    grid-template-columns: 175px minmax(0, 1fr) 290px;
+  }
+  .dd-stage-scene .dd-stage-header {
+    padding: 0 12px;
+  }
+  .dd-stage-scene .dd-stage-header nav {
+    gap: 8px;
+  }
+  .dd-stage-scene .dd-stage-header nav button {
+    flex-direction: column;
+    gap: 5px;
+    font-size: 11px;
+  }
+  .dd-stage-scene .dd-stage-header nav button:not(:last-child)::after {
+    display: none;
+  }
+  .dd-stage-scene .dd-scene-planner {
+    padding: 20px 15px;
+  }
+  .dd-stage-scene .dd-plan-row {
+    gap: 8px;
+    padding-left: 31px;
+    grid-template-columns: 24px minmax(80px, 1fr) 95px 25px;
+  }
+  .dd-stage-scene .dd-plan-action,
+  .dd-stage-scene .dd-plan-angle {
+    grid-column: 2 / 4;
+  }
+  .dd-stage-scene .dd-plan-row > .ds-icon {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .dd-stage-scene .dd-controls {
+    padding: 18px 14px;
+  }
+  .dd-stage-scene .dd-inspector-heading {
+    flex-wrap: wrap;
+  }
+  .dd-stage-scene .dd-locked-facts {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 767px) {
+  .episode-board-heading {
+    padding: 18px 14px 0;
+  }
+  .episode-board-heading h1 {
+    font-size: 28px;
+  }
+  .episode-board-toolbar nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0;
+  }
+  .episode-board-toolbar nav button {
+    padding: 0 15px;
+    font-size: 13px;
+  }
+  .episode-board-actions {
+    width: 100%;
+    gap: 7px;
+    justify-content: flex-end;
+    padding: 10px 0;
+    transform: none;
+  }
+  .episode-board-actions .st-button {
+    min-height: 37px;
+    padding: 0 9px;
+    font-size: 11px;
+    gap: 7px;
+  }
+  .episode-scene-columns {
+    padding: 14px 14px 70px;
+    grid-auto-columns: minmax(270px, 88%);
+    gap: 12px;
+    scroll-snap-type: x proximity;
+  }
+  .episode-scene-column {
+    scroll-snap-align: start;
+  }
+  .episode-scene-cover {
+    height: 135px;
+  }
+  .dd-workbench.dd-stage-scene {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+  .dd-stage-scene .dd-scene-rail {
+    padding: 0;
+    width: 100%;
+    overflow: visible;
+  }
+  .dd-stage-scene .dd-work-body,
+  .dd-stage-scene .dd-work-layout {
+    display: contents;
+  }
+  .dd-stage-scene .dd-stage-header {
+    position: sticky;
+    top: 0;
+    min-height: 64px;
+    height: 64px;
+    z-index: 4;
+    width: 100%;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .dd-stage-scene .dd-stage-header nav button {
+    font-size: 10px;
+    gap: 5px;
+  }
+  .dd-stage-scene .dd-stage-header nav button > span {
+    width: 27px;
+    height: 27px;
+  }
+  .dd-stage-scene .dd-scene-planner {
+    padding: 18px 14px;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  .dd-stage-scene .dd-scene-titlebar {
+    gap: 13px;
+  }
+  .dd-stage-scene .dd-scene-titlebar .ds-editable-heading {
+    flex-basis: 100%;
+  }
+  .dd-stage-scene .dd-scene-titlebar .ds-editable-heading > input {
+    font-size: 26px;
+  }
+  .dd-stage-scene .dd-scene-titlebar .dd-inline {
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .dd-stage-scene .dd-scene-titlebar .ds-button {
+    font-size: 11px;
+    min-height: 36px;
+    padding: 0 9px;
+  }
+  .dd-stage-scene .dd-screenplay textarea {
+    font-size: 12px;
+    padding: 14px 10px;
+    min-height: 280px;
+  }
+  .dd-stage-scene .dd-line-numbers {
+    min-width: 30px;
+    padding: 14px 8px;
+    font-size: 10px;
+  }
+  .dd-stage-scene .dd-screenplay-heading {
+    padding: 10px;
+    font-size: 12px;
+  }
+  .dd-stage-scene .dd-screenplay-heading > span {
+    display: none;
+  }
+  .dd-stage-scene .dd-shot-plan-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .dd-stage-scene .dd-shot-plan-heading h2 {
+    font-size: 18px;
+  }
+  .dd-stage-scene .dd-shot-plan-heading .ds-button {
+    font-size: 11px;
+    min-height: 36px;
+  }
+  .dd-stage-scene .dd-plan-thumb {
+    display: grid;
+  }
+  .dd-stage-scene .dd-controls {
+    padding: 20px 16px;
+    overflow: visible;
+    flex-shrink: 0;
+    min-height: 0;
+  }
+  .dd-stage-scene .dd-rail-content {
+    max-height: 60vh;
+  }
+  .dd-stage-scene .dd-scene-nav > a > img {
+    max-height: 130px;
+  }
+  .dd-stage-scene .dd-inspector-heading {
+    flex-wrap: wrap;
+  }
+  .dd-stage-scene .dd-ai-panel .dd-locked-facts {
+    flex-wrap: wrap;
+  }
+  .dd-stage-scene .dd-ai-actions {
+    margin-top: 12px;
+  }
+  .sb-quick-generate {
+    opacity: 1;
+  }
+  .dd-stage-scene .scene-title-fit {
+    flex-basis: 100%;
+    font-size: 26px;
+  }
+  .dd-stage-scene .dd-ai-panel {
+    scroll-margin-top: 68px;
+  }
+}

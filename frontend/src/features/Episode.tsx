@@ -13,7 +13,7 @@ import {
   Scissors,
   Sparkles,
 } from "lucide-react";
-import { useStore } from "../stores/store";
+import { currentWorkspaceEpoch, useStore } from "../stores/store";
 import { Button } from "../components/ui/button";
 import { useActions } from "../components/Actions";
 import { openDirector } from "../stores/director";
@@ -90,10 +90,12 @@ export function EpisodePage() {
       d.projects[projectId].revision++;
     }, true);
   async function generate(kind: "script" | "scenes") {
+    const epoch = currentWorkspaceEpoch();
     const revision = ep.scriptRevision ?? 1,
       setIds = JSON.stringify(ep.sceneIds);
     setBusy(kind);
     await new Promise((r) => setTimeout(r, 500));
+    if (epoch !== currentWorkspaceEpoch()) return;
     mutate((d) => {
       const current = d.episodes[episodeId];
       if (

@@ -11,13 +11,17 @@ export type FrameKind = "startingFrameAssetId" | "endingFrameAssetId";
 export function FrameControls({
   ids,
   onCreate,
+  initialShotId,
 }: {
   ids: string[];
+  initialShotId?: string;
   onCreate: (shotId: string, kind: FrameKind) => void;
 }) {
   const d = useStore((s) => s.data),
     mutate = useStore((s) => s.mutate);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(
+    initialShotId ?? null,
+  );
   const [assetPicker, setAssetPicker] = useState<FrameKind | null>(null);
   const [uploadKind, setUploadKind] = useState<FrameKind>(
     "startingFrameAssetId",

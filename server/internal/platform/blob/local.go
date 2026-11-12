@@ -113,3 +113,18 @@ func (c contextReader) Read(p []byte) (int, error) {
 	}
 	return c.r.Read(p)
 }
+
+func (s *Local) Delete(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	filename, err := s.path(key)
+	if err != nil {
+		return err
+	}
+	err = os.Remove(filename)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
+}

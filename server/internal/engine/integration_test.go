@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,16 +25,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"nori/studio/server/internal/accounts"
+	"nori/studio/server/internal/characters"
+	"nori/studio/server/internal/domain/interpretation"
 	"nori/studio/server/internal/domain/project"
 	"nori/studio/server/internal/engine"
-	"nori/studio/server/internal/engine/ops/brief"
+	"nori/studio/server/internal/engine/ops/interpret"
 	"nori/studio/server/internal/engine/ops/video"
 	"nori/studio/server/internal/httpapi"
 	"nori/studio/server/internal/platform/apperr"
 	"nori/studio/server/internal/platform/blob"
 	"nori/studio/server/internal/platform/db"
 	"nori/studio/server/internal/platform/queue"
+	"nori/studio/server/internal/production"
+	"nori/studio/server/internal/providers"
 	"nori/studio/server/internal/providers/fake"
+	"nori/studio/server/internal/references"
+	"nori/studio/server/internal/requests"
 )
 
 // testQueues serves every production queue with n workers each.
@@ -47,6 +55,7 @@ func testQueues(t *testing.T, n int) map[string]river.QueueConfig {
 }
 
 type fixture struct {
+	owner    string
 	pool     *pgxpool.Pool
 	queue    *river.Client[pgx.Tx]
 	projects *project.Service
@@ -54,16 +63,16 @@ type fixture struct {
 	registry *engine.Registry
 }
 
-func newRegistry(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *engine.Registry {
+func newRegistry(t *testing.T, adapter providers.Interpreter, extra ...engine.Operation) *engine.Registry {
 	t.Helper()
-	registry, err := engine.NewRegistry(append([]engine.Operation{brief.NewOperation(adapter, brief.FakeProvider, brief.FakeModel)}, extra...)...)
+	registry, err := engine.NewRegistry(append([]engine.Operation{interpret.NewOperation(adapter, fake.InterpreterProvider, fake.InterpreterModel)}, extra...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return registry
 }
 
-func setup(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *fixture {
+func setup(t *testing.T, adapter providers.Interpreter, extra ...engine.Operation) *fixture {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
@@ -104,7 +113,7 @@ func setup(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *
 	}
 	registry := newRegistry(t, adapter, extra...)
 	workers := river.NewWorkers()
-	river.AddWorker(workers, &engine.Worker{Pool: pool, Registry: registry})
+	river.AddWorker(workers, &engine.Worker{Pool: pool, Registry: registry, Publishers: []engine.ResultPublisher{characters.Publish, references.Publish, production.Publish}})
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Workers: workers, Queues: testQueues(t, 2),
 		TestOnly: true, FetchCooldown: time.Millisecond, FetchPollInterval: 10 * time.Millisecond,
@@ -120,7 +129,14 @@ func setup(t *testing.T, adapter brief.Interpreter, extra ...engine.Operation) *
 			t.Error(err)
 		}
 	})
-	return &fixture{pool: pool, queue: client, projects: project.NewService(pool), service: engine.NewJobService(pool, client, registry), registry: registry}
+	owner, err := accounts.NewService(pool).Resolve(ctx, accounts.Identity{Issuer: "test", Subject: "default"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO credit_wallets(owner_user_id,available) VALUES($1,1000000)`, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	return &fixture{owner: owner.ID, pool: pool, queue: client, projects: project.NewService(pool), service: engine.NewJobService(pool, client, registry), registry: registry}
 }
 
 func (f *fixture) start(t *testing.T) {
@@ -132,16 +148,16 @@ func (f *fixture) start(t *testing.T) {
 
 func submit(t *testing.T, f *fixture, key string) engine.Job {
 	t.Helper()
-	return submitOperation(t, f, key, brief.Name, `{"prompt":"A woman discovers a letter in a café."}`)
+	return submitOperation(t, f, key, interpret.Name, `{"prompt":"A woman discovers a letter in a café."}`)
 }
 
 func submitOperation(t *testing.T, f *fixture, key, operation, input string) engine.Job {
 	t.Helper()
-	proj, err := f.projects.Create(context.Background(), "Test film")
+	proj, err := f.projects.Create(context.Background(), f.owner, "Test film")
 	if err != nil {
 		t.Fatal(err)
 	}
-	job, err := f.service.Submit(context.Background(), proj.ID, key, engine.Submission{Operation: operation, Input: json.RawMessage(input)})
+	job, err := f.service.Submit(context.Background(), f.owner, key, engine.Submission{ProjectID: ptr(proj.ID), Operation: operation, Input: json.RawMessage(input)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +168,7 @@ func await(t *testing.T, f *fixture, id, status string) engine.JobDetail {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		detail, err := f.service.Get(context.Background(), id)
+		detail, err := f.service.Get(context.Background(), f.owner, id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,9 +185,9 @@ func await(t *testing.T, f *fixture, id, status string) engine.JobDetail {
 }
 
 func TestHTTPWorkflow(t *testing.T) {
-	f := setup(t, brief.Fake{})
+	f := setup(t, fake.Interpreter{})
 	f.start(t)
-	server := httptest.NewServer(httpapi.New(httpapi.Services{Projects: f.projects, Jobs: f.service}, slog.Default(), f.pool.Ping))
+	server := httptest.NewServer(httpapi.New(httpapi.Services{Accounts: accounts.NewService(f.pool), Authenticate: fixtureAuthentication, Projects: f.projects, Jobs: f.service, Requests: requests.NewService(f.pool, f.service)}, slog.Default(), f.pool.Ping))
 	defer server.Close()
 	post := func(path, body, key string) (int, []byte) {
 		t.Helper()
@@ -194,18 +210,19 @@ func TestHTTPWorkflow(t *testing.T) {
 	if err := json.Unmarshal(body, &created); err != nil {
 		t.Fatal(err)
 	}
-	path := "/api/v1/projects/" + created.ID + "/jobs"
-	request := `{"operation":"interpret_brief","input":{"prompt":"A café discovery."}}`
+	path := "/api/v1/requests"
+	request := `{"projectId":"` + created.ID + `","prompt":"A café discovery."}`
 	status, body = post(path, request, "first")
 	if status != 202 {
 		t.Fatalf("submission: %d %s", status, body)
 	}
-	var job engine.Job
-	if err := json.Unmarshal(body, &job); err != nil {
+	var accepted requests.Accepted
+	if err := json.Unmarshal(body, &accepted); err != nil {
 		t.Fatal(err)
 	}
+	job := accepted.Job
 	done := await(t, f, job.ID, "succeeded")
-	if len(done.Results) != 1 || done.Results[0].Kind != "creative_brief" || !bytes.Contains(done.Results[0].Content, []byte("A café discovery.")) {
+	if len(done.Results) != 1 || done.Results[0].Kind != "request_interpretation" || !bytes.Contains(done.Results[0].Content, []byte("A café discovery.")) {
 		t.Fatalf("bad result: %+v", done)
 	}
 	if len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" {
@@ -232,7 +249,7 @@ func TestHTTPWorkflow(t *testing.T) {
 		t.Fatalf("job ran on queue %q, err=%v", queueName, err)
 	}
 	var count int
-	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM generation_jobs`).Scan(&count); err != nil || count != 1 {
+	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM jobs`).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("job count=%d err=%v", count, err)
 	}
 	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM river_job`).Scan(&count); err != nil || count != 1 {
@@ -241,8 +258,8 @@ func TestHTTPWorkflow(t *testing.T) {
 }
 
 func TestConcurrentIdempotency(t *testing.T) {
-	f := setup(t, brief.Fake{})
-	proj, err := f.projects.Create(context.Background(), "Film")
+	f := setup(t, fake.Interpreter{})
+	proj, err := f.projects.Create(context.Background(), f.owner, "Film")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +269,7 @@ func TestConcurrentIdempotency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			job, err := f.service.Submit(context.Background(), proj.ID, "same", engine.Submission{Operation: brief.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
+			job, err := f.service.Submit(context.Background(), f.owner, "same", engine.Submission{ProjectID: ptr(proj.ID), Operation: interpret.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
 			if err != nil {
 				t.Error(err)
 				return
@@ -274,7 +291,7 @@ func TestConcurrentIdempotency(t *testing.T) {
 }
 
 func TestQueuedWorkSurvivesReconnect(t *testing.T) {
-	f := setup(t, brief.Fake{})
+	f := setup(t, fake.Interpreter{})
 	job := submit(t, f, "restart")
 	config := f.pool.Config().Copy()
 	other, err := pgxpool.NewWithConfig(context.Background(), config)
@@ -282,7 +299,7 @@ func TestQueuedWorkSurvivesReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := engine.NewJobService(other, f.queue, f.registry)
-	detail, err := service.Get(context.Background(), job.ID)
+	detail, err := service.Get(context.Background(), f.owner, job.ID)
 	other.Close()
 	if err != nil || detail.Status != "queued" {
 		t.Fatalf("persisted state: %+v %v", detail, err)
@@ -293,8 +310,8 @@ func TestQueuedWorkSurvivesReconnect(t *testing.T) {
 
 type invalidAdapter struct{}
 
-func (invalidAdapter) Interpret(context.Context, brief.Input) (brief.Brief, error) {
-	return brief.Brief{}, nil
+func (invalidAdapter) Interpret(context.Context, interpretation.Input) (interpretation.Decision, error) {
+	return interpretation.Decision{}, nil
 }
 
 func TestInvalidProviderOutput(t *testing.T) {
@@ -309,11 +326,11 @@ func TestInvalidProviderOutput(t *testing.T) {
 
 type transientAdapter struct{ calls atomic.Int32 }
 
-func (a *transientAdapter) Interpret(ctx context.Context, in brief.Input) (brief.Brief, error) {
+func (a *transientAdapter) Interpret(ctx context.Context, in interpretation.Input) (interpretation.Decision, error) {
 	if a.calls.Add(1) == 1 {
-		return brief.Brief{}, errors.New("temporary failure")
+		return interpretation.Decision{}, errors.New("temporary failure")
 	}
-	return (brief.Fake{}).Interpret(ctx, in)
+	return (fake.Interpreter{}).Interpret(ctx, in)
 }
 
 func TestRetryRetainsAttemptHistory(t *testing.T) {
@@ -328,24 +345,24 @@ func TestRetryRetainsAttemptHistory(t *testing.T) {
 }
 
 func TestSubmissionValidation(t *testing.T) {
-	f := setup(t, brief.Fake{})
-	proj, err := f.projects.Create(context.Background(), "Film")
+	f := setup(t, fake.Interpreter{})
+	proj, err := f.projects.Create(context.Background(), f.owner, "Film")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct{ operation, input, key string }{
 		{"unknown", `{"prompt":"story"}`, "one"},
-		{brief.Name, `{"prompt":" "}`, "two"},
-		{brief.Name, `{"prompt":"story","extra":true}`, "three"},
-		{brief.Name, `{"prompt":"story"}`, ""},
+		{interpret.Name, `{"prompt":" "}`, "two"},
+		{interpret.Name, `{"prompt":"story","extra":true}`, "three"},
+		{interpret.Name, `{"prompt":"story"}`, ""},
 	} {
-		_, err := f.service.Submit(context.Background(), proj.ID, tc.key, engine.Submission{Operation: tc.operation, Input: json.RawMessage(tc.input)})
+		_, err := f.service.Submit(context.Background(), f.owner, tc.key, engine.Submission{ProjectID: ptr(proj.ID), Operation: tc.operation, Input: json.RawMessage(tc.input)})
 		var validation *apperr.ValidationError
 		if !errors.As(err, &validation) {
 			t.Fatalf("expected validation error, got %v", err)
 		}
 	}
-	_, err = f.service.Submit(context.Background(), uuid.NewString(), "missing", engine.Submission{Operation: brief.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
+	_, err = f.service.Submit(context.Background(), f.owner, "missing", engine.Submission{ProjectID: ptr(uuid.NewString()), Operation: interpret.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
 	if !errors.Is(err, apperr.ErrNotFound) {
 		t.Fatal(err)
 	}
@@ -357,10 +374,10 @@ func TestSubmissionValidation(t *testing.T) {
 
 type blockingAdapter struct{ started chan struct{} }
 
-func (a blockingAdapter) Interpret(ctx context.Context, _ brief.Input) (brief.Brief, error) {
+func (a blockingAdapter) Interpret(ctx context.Context, _ interpretation.Input) (interpretation.Decision, error) {
 	close(a.started)
 	<-ctx.Done()
-	return brief.Brief{}, ctx.Err()
+	return interpretation.Decision{}, ctx.Err()
 }
 
 func TestRestartDuringExecution(t *testing.T) {
@@ -379,7 +396,7 @@ func TestRestartDuringExecution(t *testing.T) {
 		t.Fatal(err)
 	}
 	workers := river.NewWorkers()
-	river.AddWorker(workers, &engine.Worker{Pool: f.pool, Registry: newRegistry(t, brief.Fake{})})
+	river.AddWorker(workers, &engine.Worker{Pool: f.pool, Registry: newRegistry(t, fake.Interpreter{})})
 	next, err := river.NewClient(riverpgxv5.New(f.pool), &river.Config{
 		Workers: workers, Queues: testQueues(t, 1), TestOnly: true,
 		FetchCooldown: time.Millisecond, FetchPollInterval: 10 * time.Millisecond,
@@ -405,18 +422,18 @@ func TestRestartDuringExecution(t *testing.T) {
 }
 
 func TestEnqueueRollsBackWithJob(t *testing.T) {
-	f := setup(t, brief.Fake{})
-	proj, err := f.projects.Create(context.Background(), "Film")
+	f := setup(t, fake.Interpreter{})
+	proj, err := f.projects.Create(context.Background(), f.owner, "Film")
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = f.pool.Exec(context.Background(), `
  CREATE FUNCTION reject_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test insertion failure'; END $$;
- CREATE TRIGGER reject_job BEFORE INSERT ON generation_jobs FOR EACH ROW EXECUTE FUNCTION reject_job();`)
+ CREATE TRIGGER reject_job BEFORE INSERT ON jobs FOR EACH ROW EXECUTE FUNCTION reject_job();`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = f.service.Submit(context.Background(), proj.ID, "rollback", engine.Submission{Operation: brief.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
+	_, err = f.service.Submit(context.Background(), f.owner, "rollback", engine.Submission{ProjectID: ptr(proj.ID), Operation: interpret.Name, Input: json.RawMessage(`{"prompt":"story"}`)})
 	if err == nil {
 		t.Fatal("expected transaction failure")
 	}
@@ -427,10 +444,10 @@ func TestEnqueueRollsBackWithJob(t *testing.T) {
 }
 
 func TestReconcileExhaustedCrash(t *testing.T) {
-	f := setup(t, brief.Fake{})
+	f := setup(t, fake.Interpreter{})
 	job := submit(t, f, "crash")
 	_, err := f.pool.Exec(context.Background(), `
- UPDATE generation_jobs SET status='running',active_attempt=3 WHERE id=$1;
+ UPDATE jobs SET status='running',active_attempt=3 WHERE id=$1;
  `, job.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -439,14 +456,14 @@ func TestReconcileExhaustedCrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = f.pool.Exec(context.Background(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE id=(SELECT river_job_id FROM generation_jobs WHERE id=$1)`, job.ID)
+	_, err = f.pool.Exec(context.Background(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE id=(SELECT river_job_id FROM jobs WHERE id=$1)`, job.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := f.service.Reconcile(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	done, err := f.service.Get(context.Background(), job.ID)
+	done, err := f.service.Get(context.Background(), f.owner, job.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -454,7 +471,7 @@ func TestReconcileExhaustedCrash(t *testing.T) {
 		t.Fatalf("unreconciled job: %+v", done)
 	}
 	var persisted string
-	if err := f.pool.QueryRow(context.Background(), `SELECT status FROM generation_jobs WHERE id=$1`, job.ID).Scan(&persisted); err != nil || persisted != "failed" {
+	if err := f.pool.QueryRow(context.Background(), `SELECT status FROM jobs WHERE id=$1`, job.ID).Scan(&persisted); err != nil || persisted != "failed" {
 		t.Fatalf("status=%s err=%v", persisted, err)
 	}
 }
@@ -500,7 +517,7 @@ func (p *pipeline) Step(_ context.Context, run engine.Run) (engine.Outcome, erro
 
 func TestMultiStepOperation(t *testing.T) {
 	op := &pipeline{}
-	f := setup(t, brief.Fake{}, op)
+	f := setup(t, fake.Interpreter{}, op)
 	f.start(t)
 	job := submitOperation(t, f, "pipeline", op.Name(), `{}`)
 	done := await(t, f, job.ID, "succeeded")
@@ -536,7 +553,7 @@ func TestMultiStepOperation(t *testing.T) {
 func TestRetryResumesFromCheckpoint(t *testing.T) {
 	op := &pipeline{}
 	op.failOnce.Store(true)
-	f := setup(t, brief.Fake{}, op)
+	f := setup(t, fake.Interpreter{}, op)
 	f.start(t)
 	job := submitOperation(t, f, "resume", op.Name(), `{}`)
 	done := await(t, f, job.ID, "succeeded")
@@ -557,7 +574,7 @@ func TestGenerateVideo(t *testing.T) {
 		t.Fatal(err)
 	}
 	op := video.NewOperation(&fake.Video{Delay: 100 * time.Millisecond, Sample: []byte("clip")}, store, 20*time.Millisecond)
-	f := setup(t, brief.Fake{}, op)
+	f := setup(t, fake.Interpreter{}, op)
 	f.start(t)
 	job := submitOperation(t, f, "video", video.Name, `{"prompt":"three small dogs dancing on a beach","durationSeconds":6}`)
 	done := await(t, f, job.ID, "succeeded")
@@ -579,11 +596,78 @@ func TestGenerateVideo(t *testing.T) {
 	if data, _ := io.ReadAll(file); string(data) != "clip" {
 		t.Fatalf("stored %q", data)
 	}
-	if len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" || done.Attempts[0].Provider != "fake_minimax" {
+	if len(done.Attempts) != 1 || done.Attempts[0].Status != "succeeded" || (done.Attempts[0].Provider == nil || *done.Attempts[0].Provider != "fake_minimax") {
 		t.Fatalf("attempts: %+v", done.Attempts)
 	}
 	var queueName string
 	if err := f.pool.QueryRow(context.Background(), `SELECT queue FROM river_job`).Scan(&queueName); err != nil || queueName != queue.Video {
 		t.Fatalf("queue %q, err=%v", queueName, err)
 	}
+}
+
+func TestInterpretRequestMigration(t *testing.T) {
+	f := setup(t, fake.Interpreter{})
+	ctx := context.Background()
+	queued := submit(t, f, "queued")
+	completed := submit(t, f, "completed")
+	legacyContent := `{"premise":"An existing story","characters":[],"setting":"unspecified","style":"unspecified","assumptions":[],"questions":[]}`
+	if _, err := f.pool.Exec(ctx, `INSERT INTO artifacts (id, project_id, producer_job_id, kind, schema_version, content_json)
+ VALUES ($1, $2, $3, 'creative_brief', 1, $4::jsonb)`, uuid.NewString(), completed.ProjectID, completed.ID, legacyContent); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `UPDATE jobs SET operation='interpret_brief', status=CASE WHEN id=$1 THEN 'succeeded' ELSE status END`, completed.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `ALTER TABLE jobs RENAME TO generation_jobs;
+ ALTER INDEX jobs_project_created RENAME TO generation_jobs_project_created;
+ DROP INDEX jobs_created_id;
+ DROP INDEX IF EXISTS jobs_standalone_idempotency_key;
+ ALTER TABLE generation_jobs ALTER COLUMN project_id SET NOT NULL;
+ ALTER TABLE artifacts ALTER COLUMN project_id SET NOT NULL;
+ ALTER TABLE job_attempts ALTER COLUMN provider SET NOT NULL;
+ ALTER TABLE job_attempts ALTER COLUMN model SET NOT NULL;`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `DELETE FROM studio_migrations WHERE name IN ('migrations/003_interpret_request.sql','migrations/004_general_jobs.sql')`); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := db.Migrate(ctx, f.pool); err != nil {
+			t.Fatal(err)
+		}
+	}
+	replay, err := f.service.Submit(ctx, f.owner, "queued", engine.Submission{ProjectID: queued.ProjectID, Operation: interpret.Name, Input: queued.Input})
+	if err != nil || replay.ID != queued.ID {
+		t.Fatalf("idempotent replay: %+v, %v", replay, err)
+	}
+	historical, err := f.service.Get(ctx, f.owner, completed.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if historical.Operation != interpret.Name || len(historical.Results) != 1 || historical.Results[0].Kind != "creative_brief" || historical.Results[0].SchemaVersion != 1 {
+		t.Fatalf("historical result changed: %+v", historical)
+	}
+	var content, original any
+	if err := json.Unmarshal(historical.Results[0].Content, &content); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(legacyContent), &original); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(content, original) {
+		t.Fatalf("historical content changed: %s", historical.Results[0].Content)
+	}
+	f.start(t)
+	done := await(t, f, queued.ID, "succeeded")
+	if done.Operation != interpret.Name || len(done.Results) != 1 || done.Results[0].Kind != "request_interpretation" {
+		t.Fatalf("migrated job did not produce an interpretation: %+v", done)
+	}
+}
+
+func ptr[T any](v T) *T { return &v }
+
+func fixtureAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		next.ServeHTTP(w, req.WithContext(accounts.WithIdentity(req.Context(), accounts.Identity{Issuer: "test", Subject: "default"})))
+	})
 }

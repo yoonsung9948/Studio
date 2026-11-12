@@ -1,3 +1,4 @@
+import { sceneScreenplay, screenplayBeats } from "./scene-text";
 import {
   markShotsStale as markDomainShotsStale,
   bumpStudio,
@@ -68,7 +69,7 @@ export function createWorkspaceEpisode(
   d: Data,
   pid: string,
   idea: string,
-  seconds = 30,
+  seconds = d.projects[pid]?.defaultDuration ?? 30,
 ) {
   if (!d.projects[pid]) throw Error("Choose a project first.");
   const id = uid("episode");
@@ -117,7 +118,9 @@ export function createHomeDraft(
   if (!idea.trim()) throw Error("Describe what you want to create.");
   let pid = projectId;
   if (!pid) {
-    pid = Object.values(d.projects).find((p) => p.unfiled)?.id;
+    pid = Object.values(d.projects).find(
+      (p) => p.unfiled && !p.assetLibrary,
+    )?.id;
     if (!pid) {
       pid = createWorkspaceProject(d, "Unfiled");
       d.projects[pid].unfiled = true;
@@ -194,7 +197,7 @@ export function addWorkspaceShot(d: Data, sid: string) {
     id,
     sceneId: sid,
     title: `Shot ${sc.shotIds.length + 1}`,
-    action: sc.description,
+    action: screenplayBeats(sceneScreenplay(d, sid))[0] ?? "",
     dialogue: "",
     characters: [],
     targetFrames: 120,
@@ -234,6 +237,23 @@ export function changeShot(
   if (!shot) throw Error("Shot missing.");
   if (shot.locked) throw Error("Unlock this shot before editing.");
   Object.assign(shot, fields);
+  invalidateWorkspaceShots(d, [id]);
+}
+/** Plan the next generated take without trimming an already chosen video. */
+export function planShotDuration(d: Data, id: string, seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 1 || seconds > 30)
+    throw Error("Use 1–30 seconds.");
+  const shot = d.shots[id];
+  if (!shot) throw Error("Shot missing.");
+  if (shot.locked) throw Error("Unlock the shot first.");
+  const frames = Math.round(seconds * 30);
+  if (shot.targetFrames === frames) return;
+  shot.targetFrames = frames;
+  const scene = d.scenes[shot.sceneId];
+  ensureSetup(d, scene.id).targetSeconds = scene.shotIds
+    .filter((shotId) => !d.shots[shotId]?.archived)
+    .reduce((sum, shotId) => sum + d.shots[shotId].targetFrames / 30, 0);
+  scene.planRevision = (scene.planRevision ?? 1) + 1;
   invalidateWorkspaceShots(d, [id]);
 }
 export function setShotDuration(d: Data, id: string, seconds: number) {
@@ -559,12 +579,18 @@ export function approveWorkspaceSource(d: Data, id: string) {
   approveScenePlan(d, sc.id);
 }
 export function worldAppearances(d: Data, kind: string, id: string) {
-  return Object.values(d.shots).filter((s) =>
-    kind === "character"
-      ? effectiveCast(d, s.id).some((c) => c.characterId === id)
-      : kind === "place"
-        ? generationInputs(d, s.sceneId, s.id).locationId === id
-        : (s.worldElementIds ?? []).includes(id),
+  return Object.values(d.shots).filter(
+    (s) =>
+      !s.archived &&
+      !d.scenes[s.sceneId].archived &&
+      !d.episodes[d.scenes[s.sceneId].episodeId].archived &&
+      !d.projects[d.episodes[d.scenes[s.sceneId].episodeId].projectId]
+        .archived &&
+      (kind === "character"
+        ? effectiveCast(d, s.id).some((c) => c.characterId === id)
+        : kind === "place"
+          ? generationInputs(d, s.sceneId, s.id).locationId === id
+          : (s.worldElementIds ?? []).includes(id)),
   );
 }
 export type WorldElementKind = "character" | "place" | "prop" | "note";

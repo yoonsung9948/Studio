@@ -10,9 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"nori/studio/server/internal/accounts"
 	"nori/studio/server/internal/domain/project"
 	"nori/studio/server/internal/engine"
 	"nori/studio/server/internal/platform/apperr"
+	"nori/studio/server/internal/requests"
 )
 
 type stubBackend struct {
@@ -20,22 +22,43 @@ type stubBackend struct {
 	calls int
 }
 
-// stubBackend implements both ProjectService and JobService.
-func (s *stubBackend) Create(context.Context, string) (project.Project, error) {
-	s.calls++
-	return project.Project{ID: "project"}, s.err
+type stubProjects struct{ backend *stubBackend }
+
+func (s stubProjects) Create(context.Context, string, string) (project.Project, error) {
+	s.backend.calls++
+	return project.Project{ID: "project"}, s.backend.err
 }
-func (s *stubBackend) Submit(context.Context, string, string, engine.Submission) (engine.Job, error) {
-	s.calls++
-	return engine.Job{ID: "job", Status: "queued"}, s.err
+
+type stubRequests struct{ backend *stubBackend }
+
+func (s stubRequests) Submit(context.Context, string, string, requests.Submission) (requests.Accepted, error) {
+	s.backend.calls++
+	return requests.Accepted{Request: requests.Request{ID: "request"}, Job: engine.Job{ID: "job", Status: "queued"}}, s.backend.err
 }
-func (s *stubBackend) Get(context.Context, string) (engine.JobDetail, error) {
+func (s stubRequests) Get(context.Context, string, string) (requests.Request, error) {
+	s.backend.calls++
+	return requests.Request{}, s.backend.err
+}
+func (s *stubBackend) Get(context.Context, string, string) (engine.JobDetail, error) {
 	s.calls++
 	return engine.JobDetail{}, s.err
 }
 
+func (s stubProjects) Get(context.Context, string, string) (project.Project, error) {
+	s.backend.calls++
+	return project.Project{}, s.backend.err
+}
+func (s stubProjects) List(context.Context, string, project.ListParams) (project.Page, error) {
+	s.backend.calls++
+	return project.Page{Items: []project.Project{}}, s.backend.err
+}
+func (s *stubBackend) List(context.Context, string, engine.ListJobsParams) (engine.JobPage, error) {
+	s.calls++
+	return engine.JobPage{Items: []engine.Job{}}, s.err
+}
+
 func newAPI(backend *stubBackend, logger *slog.Logger, ready func(context.Context) error) http.Handler {
-	return New(Services{Projects: backend, Jobs: backend}, logger, ready)
+	return New(Services{Accounts: &stubAccounts{}, Authenticate: testAuthentication, Projects: stubProjects{backend}, Jobs: backend, Requests: stubRequests{backend}}, logger, ready)
 }
 
 func TestRequestValidation(t *testing.T) {
@@ -44,7 +67,7 @@ func TestRequestValidation(t *testing.T) {
 		{"trailing object", "/api/v1/projects", `{"title":"test"} {}`},
 		{"malformed", "/api/v1/projects", `{`},
 		{"oversized", "/api/v1/projects", `{"title":"` + strings.Repeat("a", 65536) + `"}`},
-		{"bad project ID", "/api/v1/projects/invalid/jobs", `{}`},
+		{"bad JSON", "/api/v1/requests", `{`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -99,8 +122,24 @@ func TestReadiness(t *testing.T) {
 func TestSubmissionLocation(t *testing.T) {
 	api := newAPI(&stubBackend{}, slog.Default(), func(context.Context) error { return nil })
 	w := httptest.NewRecorder()
-	api.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/projects/00000000-0000-0000-0000-000000000001/jobs", strings.NewReader(`{"operation":"interpret_brief","input":{"prompt":"story"}}`)))
-	if w.Code != 202 || w.Header().Get("Location") != "/api/v1/jobs/job" {
+	api.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/requests", strings.NewReader(`{"prompt":"story"}`)))
+	if w.Code != 202 || w.Header().Get("Location") != "/api/v1/requests/request" {
 		t.Fatalf("status=%d headers=%v", w.Code, w.Header())
 	}
+}
+
+func TestJobSubmissionIsInternal(t *testing.T) {
+	backend := &stubBackend{}
+	api := newAPI(backend, slog.Default(), func(context.Context) error { return nil })
+	w := httptest.NewRecorder()
+	api.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/jobs", strings.NewReader(`{}`)))
+	if w.Code != 405 || backend.calls != 0 {
+		t.Fatalf("status=%d calls=%d", w.Code, backend.calls)
+	}
+}
+
+func testAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		next.ServeHTTP(w, req.WithContext(accounts.WithIdentity(req.Context(), accounts.Identity{Issuer: "test", Subject: "default"})))
+	})
 }

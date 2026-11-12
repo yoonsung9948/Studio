@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"nori/studio/server/internal/assets"
+	"nori/studio/server/internal/billing"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,7 +21,7 @@ import (
 const maxAttempts = 3
 
 // JobArgs is the River payload for every operation. It holds only the job ID;
-// the worker loads the operation, input and checkpoint from generation_jobs.
+// the worker loads the operation, input and checkpoint from jobs.
 type JobArgs struct {
 	JobID string `json:"jobId"`
 }
@@ -28,14 +31,19 @@ func (JobArgs) Kind() string { return "generation_job" }
 // Worker runs one step of any registered operation per River execution: it
 // claims the job, runs the step outside a transaction, then carries out the
 // step's outcome (publish, wait or continue) or records the failure.
+// ResultPublisher registers domain records in the job completion transaction.
+type ResultPublisher func(context.Context, pgx.Tx, string, string) error
+
 type Worker struct {
 	river.WorkerDefaults[JobArgs]
-	Pool     *pgxpool.Pool
-	Registry *Registry
+	Pool       *pgxpool.Pool
+	Registry   *Registry
+	Publishers []ResultPublisher
 }
 
 // claim is what an execution holds after claiming a job.
 type claim struct {
+	ownerID string
 	lease   string // fences writes: only the latest claim may save results
 	attempt int
 	op      Operation // nil if the operation is not registered
@@ -63,7 +71,7 @@ func (w *Worker) Work(ctx context.Context, task *river.Job[JobArgs]) error {
 		return w.fail(ctx, task, c, "invalid_input", "Stored job input is invalid.", false)
 	}
 	stepCtx, cancelStep := context.WithTimeout(ctx, stepTimeout(c.op, c.step))
-	outcome, err := c.op.Step(stepCtx, Run{JobID: task.Args.JobID, Attempt: c.attempt, Input: c.input, Step: c.step, State: c.state})
+	outcome, err := c.op.Step(stepCtx, Run{JobID: task.Args.JobID, OwnerID: c.ownerID, Attempt: c.attempt, Input: c.input, Step: c.step, State: c.state})
 	cancelStep()
 	if err != nil {
 		var runErr *RunError
@@ -102,10 +110,17 @@ func (w *Worker) claim(ctx context.Context, task *river.Job[JobArgs]) (*claim, e
 	var riverJobID int64
 	var continuing bool
 	c := &claim{lease: uuid.NewString()}
-	err = tx.QueryRow(ctx, `SELECT operation,input_json,status,input_schema_version,active_attempt,river_job_id,step,state,continuing FROM generation_jobs WHERE id=$1 FOR UPDATE`, task.Args.JobID).
-		Scan(&operation, &c.input, &status, &c.version, &c.attempt, &riverJobID, &c.step, &c.state, &continuing)
+	err = tx.QueryRow(ctx, `SELECT operation,input_json,status,input_schema_version,active_attempt,river_job_id,step,state,continuing,owner_user_id::text FROM jobs WHERE id=$1 FOR UPDATE`, task.Args.JobID).
+		Scan(&operation, &c.input, &status, &c.version, &c.attempt, &riverJobID, &c.step, &c.state, &continuing, &c.ownerID)
 	if err != nil {
 		return nil, err
+	}
+	var active bool
+	if err := tx.QueryRow(ctx, `SELECT status='active' FROM users WHERE id=$1`, c.ownerID).Scan(&active); err != nil {
+		return nil, err
+	}
+	if !active {
+		return nil, river.JobCancel(errors.New("job owner is disabled"))
 	}
 	// A finished job, or a River job replaced by a move to another queue, has nothing to do.
 	if status == "succeeded" || status == "failed" || riverJobID != task.ID {
@@ -115,20 +130,20 @@ func (w *Worker) claim(ctx context.Context, task *river.Job[JobArgs]) (*claim, e
 		c.op = op
 	}
 	if continuing {
-		_, err = tx.Exec(ctx, `UPDATE generation_jobs SET lease=$2,continuing=false,updated_at=now() WHERE id=$1`, task.Args.JobID, c.lease)
+		_, err = tx.Exec(ctx, `UPDATE jobs SET lease=$2,continuing=false,updated_at=now() WHERE id=$1 AND owner_user_id=$3`, task.Args.JobID, c.lease, c.ownerID)
 	} else {
 		c.attempt++
-		provider, model := "unknown", "unknown"
-		if c.op != nil {
-			provider, model = c.op.Provider()
+		provider, model := "", ""
+		if reporter, ok := c.op.(ProviderReporter); ok {
+			provider, model = reporter.Provider()
 		}
-		if _, err = tx.Exec(ctx, `UPDATE job_attempts SET status='interrupted',finished_at=now() WHERE job_id=$1 AND status='running'`, task.Args.JobID); err != nil {
+		if _, err = tx.Exec(ctx, `UPDATE job_attempts SET status='interrupted',finished_at=now() WHERE job_id=$1 AND status='running' AND EXISTS(SELECT 1 FROM jobs WHERE id=$1 AND owner_user_id=$2)`, task.Args.JobID, c.ownerID); err != nil {
 			return nil, err
 		}
-		if _, err = tx.Exec(ctx, `INSERT INTO job_attempts(job_id,number,provider,model,status) VALUES($1,$2,$3,$4,'running')`, task.Args.JobID, c.attempt, provider, model); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO job_attempts(job_id,number,provider,model,status) SELECT $1,$2,NULLIF($3,''),NULLIF($4,''),'running' FROM jobs WHERE id=$1 AND owner_user_id=$5`, task.Args.JobID, c.attempt, provider, model, c.ownerID); err != nil {
 			return nil, err
 		}
-		_, err = tx.Exec(ctx, `UPDATE generation_jobs SET status='running',active_attempt=$2,lease=$3,continuing=false,error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1`, task.Args.JobID, c.attempt, c.lease)
+		_, err = tx.Exec(ctx, `UPDATE jobs SET status='running',active_attempt=$2,lease=$3,continuing=false,error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1 AND owner_user_id=$4`, task.Args.JobID, c.attempt, c.lease, c.ownerID)
 	}
 	if err != nil {
 		return nil, err
@@ -140,7 +155,7 @@ func (w *Worker) claim(ctx context.Context, task *river.Job[JobArgs]) (*claim, e
 // A stale execution (one replaced by a retry or recovery) must not write results.
 func holdsLease(ctx context.Context, tx pgx.Tx, jobID string, c *claim) (bool, error) {
 	var lease *string
-	if err := tx.QueryRow(ctx, `SELECT lease::text FROM generation_jobs WHERE id=$1 FOR UPDATE`, jobID).Scan(&lease); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT lease::text FROM jobs WHERE id=$1 AND owner_user_id=$2 FOR UPDATE`, jobID, c.ownerID).Scan(&lease); err != nil {
 		return false, err
 	}
 	return lease != nil && *lease == c.lease, nil
@@ -157,14 +172,31 @@ func (w *Worker) publish(ctx context.Context, task *river.Job[JobArgs], c *claim
 		return err
 	}
 	for i, a := range done.Artifacts {
-		if _, err = tx.Exec(ctx, `INSERT INTO artifacts(id,project_id,producer_job_id,position,kind,schema_version,content_json) SELECT $2,project_id,id,$3,$4,$5,$6 FROM generation_jobs WHERE id=$1 ON CONFLICT(producer_job_id,position) DO NOTHING`, task.Args.JobID, uuid.NewString(), i, a.Kind, a.SchemaVersion, a.Content); err != nil {
+		if a.Media != nil && !strings.HasPrefix(a.Media.FileKey, "jobs/"+task.Args.JobID+"/") {
+			return errors.New("media key must belong to producing job")
+		}
+		artifactID := uuid.NewString()
+		if _, err = tx.Exec(ctx, `INSERT INTO artifacts(id,project_id,producer_job_id,position,kind,schema_version,content_json) SELECT $2,project_id,id,$3,$4,$5,$6 FROM jobs WHERE id=$1 AND owner_user_id=$7 ON CONFLICT(producer_job_id,position) DO NOTHING`, task.Args.JobID, artifactID, i, a.Kind, a.SchemaVersion, a.Content, c.ownerID); err != nil {
+			return err
+		}
+		if a.Media != nil {
+			if err := assets.Publish(ctx, tx, c.ownerID, task.Args.JobID, i, assets.FileDraft{SourceAssetID: a.Media.SourceAssetID, Kind: a.Media.Kind, Key: a.Media.FileKey, ContentType: a.Media.ContentType, SizeBytes: a.Media.SizeBytes}); err != nil {
+				return err
+			}
+		}
+	}
+	for _, publish := range w.Publishers {
+		if err := publish(ctx, tx, c.ownerID, task.Args.JobID); err != nil {
 			return err
 		}
 	}
-	if _, err = tx.Exec(ctx, `UPDATE job_attempts SET status='succeeded',provider=COALESCE(NULLIF($3,''),provider),model=COALESCE(NULLIF($4,''),model),finished_at=now() WHERE job_id=$1 AND number=$2`, task.Args.JobID, c.attempt, done.Provider, done.Model); err != nil {
+	if err := billing.Capture(ctx, tx, c.ownerID, task.Args.JobID); err != nil {
 		return err
 	}
-	if _, err = tx.Exec(ctx, `UPDATE generation_jobs SET status='succeeded',error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1`, task.Args.JobID); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE job_attempts SET status='succeeded',provider=COALESCE(NULLIF($3,''),provider),model=COALESCE(NULLIF($4,''),model),finished_at=now() WHERE job_id=$1 AND number=$2 AND EXISTS(SELECT 1 FROM jobs WHERE id=$1 AND owner_user_id=$5)`, task.Args.JobID, c.attempt, done.Provider, done.Model, c.ownerID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE jobs SET status='succeeded',error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1 AND owner_user_id=$2`, task.Args.JobID, c.ownerID); err != nil {
 		return err
 	}
 	if _, err = river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, task); err != nil {
@@ -184,7 +216,7 @@ func (w *Worker) wait(ctx context.Context, c *claim, jobID string, o Wait) error
 	if ok, err := holdsLease(ctx, tx, jobID, c); err != nil || !ok {
 		return err
 	}
-	if _, err = tx.Exec(ctx, `UPDATE generation_jobs SET state=COALESCE($2,state),continuing=true,updated_at=now() WHERE id=$1`, jobID, jsonOrNil(o.State)); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE jobs SET state=COALESCE($2,state),continuing=true,updated_at=now() WHERE id=$1 AND owner_user_id=$3`, jobID, jsonOrNil(o.State), c.ownerID); err != nil {
 		return err
 	}
 	if err = tx.Commit(ctx); err != nil {
@@ -205,7 +237,7 @@ func (w *Worker) next(ctx context.Context, task *river.Job[JobArgs], c *claim, o
 	if ok, err := holdsLease(ctx, tx, task.Args.JobID, c); err != nil || !ok {
 		return err
 	}
-	if _, err = tx.Exec(ctx, `UPDATE generation_jobs SET step=$2,state=$3,continuing=true,updated_at=now() WHERE id=$1`, task.Args.JobID, o.Step, jsonOrNil(o.State)); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE jobs SET step=$2,state=$3,continuing=true,updated_at=now() WHERE id=$1 AND owner_user_id=$4`, task.Args.JobID, o.Step, jsonOrNil(o.State), c.ownerID); err != nil {
 		return err
 	}
 	if o.Queue == "" || o.Queue == task.Queue {
@@ -218,7 +250,7 @@ func (w *Worker) next(ctx context.Context, task *river.Job[JobArgs], c *claim, o
 	if err != nil {
 		return fmt.Errorf("move job to queue %s: %w", o.Queue, err)
 	}
-	if _, err = tx.Exec(ctx, `UPDATE generation_jobs SET river_job_id=$2 WHERE id=$1`, task.Args.JobID, moved.Job.ID); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE jobs SET river_job_id=$2 WHERE id=$1 AND owner_user_id=$3`, task.Args.JobID, moved.Job.ID, c.ownerID); err != nil {
 		return err
 	}
 	if _, err = river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, task); err != nil {
@@ -246,11 +278,16 @@ func (w *Worker) fail(ctx context.Context, task *river.Job[JobArgs], c *claim, c
 	if terminal {
 		status = "failed"
 	}
-	if _, err = tx.Exec(saveCtx, `UPDATE job_attempts SET status='failed',error_code=$3,error_message=$4,finished_at=now() WHERE job_id=$1 AND number=$2`, task.Args.JobID, c.attempt, code, message); err != nil {
+	if _, err = tx.Exec(saveCtx, `UPDATE job_attempts SET status='failed',error_code=$3,error_message=$4,finished_at=now() WHERE job_id=$1 AND number=$2 AND EXISTS(SELECT 1 FROM jobs WHERE id=$1 AND owner_user_id=$5)`, task.Args.JobID, c.attempt, code, message, c.ownerID); err != nil {
 		return err
 	}
-	if _, err = tx.Exec(saveCtx, `UPDATE generation_jobs SET status=$2,error_code=$3,error_message=$4,continuing=false,updated_at=now() WHERE id=$1`, task.Args.JobID, status, code, message); err != nil {
+	if _, err = tx.Exec(saveCtx, `UPDATE jobs SET status=$2,error_code=$3,error_message=$4,continuing=false,updated_at=now() WHERE id=$1 AND owner_user_id=$5`, task.Args.JobID, status, code, message, c.ownerID); err != nil {
 		return err
+	}
+	if terminal {
+		if err := billing.Release(saveCtx, tx, c.ownerID, task.Args.JobID); err != nil {
+			return err
+		}
 	}
 	if err = tx.Commit(saveCtx); err != nil {
 		return err

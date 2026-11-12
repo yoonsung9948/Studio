@@ -4,6 +4,7 @@ export type EntityType =
   | "episode"
   | "scene"
   | "shot"
+  | "look"
   | "character"
   | "place"
   | "prop"

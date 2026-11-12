@@ -1,358 +1,340 @@
-import { BrandMark, BrandWordmark } from "../../components/Brand";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowDown,
   ArrowRight,
   Check,
-  ChevronRight,
-  Layers3,
-  Sparkles,
+  Clapperboard,
+  Layers,
+  Pause,
+  Play,
+  UsersRound,
 } from "lucide-react";
+import { BrandMark, BrandWordmark } from "../../components/Brand";
+import { demoMedia } from "../../mocks/demo-media";
 
-const scenes = [
+const steps = [
   {
-    title: "The arrival",
-    image: "/media/arrival.svg",
-    duration: "00:08",
-    note: "A familiar place. An unexpected beginning.",
+    title: "Shape your scene",
+    label: "Scene",
+    detail: "Describe your scene with simple tools built for filmmakers.",
   },
   {
-    title: "The message",
-    image: "/media/message.svg",
-    duration: "00:06",
-    note: "One small detail changes the whole story.",
+    title: "Choose the frame",
+    label: "Starting frame",
+    detail: "Generate and choose the perfect starting frame.",
   },
   {
-    title: "The discovery",
-    image: "/media/discovery.svg",
-    duration: "00:10",
-    note: "Give the quiet moments room to unfold.",
+    title: "Direct the motion",
+    label: "Motion",
+    detail: "Guide the performance with precise, cinematic control.",
+  },
+  {
+    title: "Make the edit",
+    label: "Review",
+    detail: "Refine and export a scene ready for your episode.",
   },
 ];
+const frames = [demoMedia.maya, demoMedia.reunion, demoMedia.jun];
+const screenplay = [
+  "Rain streaks the window. Maya and Jun sit opposite each other.",
+  "",
+  "                MAYA",
+  "       You kept it?",
+  "",
+  "                JUN",
+  "  I couldn't throw it away.",
+  "",
+  "Maya slides the sealed letter across the table.",
+];
 
-function Brand() {
+function Filmstrip({ edit = false }: { edit?: boolean }) {
   return (
-    <Link to="/" className="product-brand" aria-label="dotori studio home">
-      <BrandMark decorative />
-      <BrandWordmark />
-    </Link>
+    <div
+      className={`landing-filmstrip ${edit ? "is-edit" : ""}`}
+      aria-hidden="true"
+    >
+      {[
+        demoMedia.reunion,
+        edit ? demoMedia.letter : demoMedia.jun,
+        demoMedia.cafe,
+      ].map((src, index) => (
+        <div
+          key={src}
+          className={edit && index === 1 ? "is-selected" : undefined}
+        >
+          <img src={src} alt="" />
+        </div>
+      ))}
+      <span className="landing-playhead" />
+    </div>
+  );
+}
+
+/** A local, explicitly labelled still-image preview; it never submits generation. */
+function MotionPreview({ onExplore }: { onExplore(): void }) {
+  const [playing, setPlaying] = useState(false),
+    [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!playing) return;
+    const start = performance.now() - progress * 5000;
+    const timer = window.setInterval(() => {
+      const next = Math.min(1, (performance.now() - start) / 5000);
+      setProgress(next);
+      if (next === 1) setPlaying(false);
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [playing]);
+  return (
+    <>
+      <div className={`landing-motion-preview ${playing ? "is-playing" : ""}`}>
+        <img
+          src={demoMedia.reunion}
+          alt="Maya and Jun in the café, illustrating motion direction"
+          style={{ transform: `scale(${1 + progress * 0.06})` }}
+        />
+        <button
+          aria-label={playing ? "Pause motion preview" : "Play motion preview"}
+          onClick={() => {
+            onExplore();
+            if (progress === 1) setProgress(0);
+            setPlaying(!playing);
+          }}
+        >
+          {playing ? (
+            <Pause fill="currentColor" size={22} />
+          ) : (
+            <Play fill="currentColor" size={24} />
+          )}
+        </button>
+        {(playing || progress > 0) && (
+          <>
+            <span className="landing-preview-caption">Still-image preview</span>
+            <progress
+              aria-label="Motion preview progress"
+              value={progress}
+              max={1}
+            />
+          </>
+        )}
+      </div>
+      <Filmstrip />
+    </>
   );
 }
 
 export function ProductPage() {
-  const [selected, setSelected] = useState(0);
-  const scene = scenes[selected];
+  const [stage, setStage] = useState(0),
+    [frame, setFrame] = useState(0);
+  const explore = (index: number) => {
+    setStage(index);
+    document
+      .getElementById(`workflow-${index + 1}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
   return (
-    <div className="product-page" id="top">
-      <a className="product-skip" href="#product-content">
+    <div className="ds-public landing-page" id="top">
+      <a className="ds-skip" href="#product-content">
         Skip to content
       </a>
-      <header className="product-header">
-        <Brand />
-        <nav aria-label="Product navigation">
-          <a href="#workflow">How it works</a>
-          <a href="#your-world">Your story world</a>
-        </nav>
-        <Link className="product-login" to="/login">
-          Log in
-          <ArrowRight size={15} />
+      <header className="ds-public-header landing-header">
+        <Link
+          to="/"
+          className="ds-public-brand"
+          aria-label="dotori studio home"
+        >
+          <BrandMark decorative />
+          <BrandWordmark />
         </Link>
+        <nav aria-label="Product navigation">
+          <a href="#workflow">Workflow</a>
+          <a href="#cast-continuity">Cast & continuity</a>
+          <a href="#for-studios">For studios</a>
+        </nav>
+        <div className="landing-header-actions">
+          <Link className="ds-button" to="/login">
+            Sign in
+          </Link>
+          <Link className="ds-button ds-primary" to="/login">
+            Start creating
+            <ArrowRight size={19} />
+          </Link>
+        </div>
       </header>
       <main id="product-content">
-        <section className="product-hero product-container">
-          <div className="product-hero-copy">
-            <span className="product-eyebrow">
-              <span /> AN EPISODE-FIRST FILM STUDIO
-            </span>
-            <h1>
+        <section className="landing-hero" aria-labelledby="landing-title">
+          <img
+            className="landing-hero-image"
+            src="/media/director-desk/projects-hero.png"
+            alt="Maya and Jun meet in a warmly lit café on a rainy evening"
+            fetchPriority="high"
+          />
+          <div className="landing-hero-shade" />
+          <div className="landing-hero-copy">
+            <h1 id="landing-title">
               A story worth telling.
-              <br />
-              <em>A studio to make it.</em>
+              <br />A studio to make it.
             </h1>
             <p>
-              Turn a little idea into a whole new world. Write your episodes,
-              build your cast, and shape every scene in one creative workspace.
+              Shape a scene, choose your starting frame,
+              <br className="landing-desktop-break" /> and direct the motion.
             </p>
-            <div className="product-hero-actions">
-              <Link className="product-cta" to="/login">
-                Explore the studio
-                <ArrowRight size={17} />
+            <div className="landing-hero-actions">
+              <Link className="ds-button ds-primary" to="/login">
+                Start creating
+                <ArrowRight size={21} />
               </Link>
-              <a className="product-text-link" href="#workflow">
-                Find your flow
-                <ArrowDown size={15} />
+              <a className="ds-button" href="#workflow">
+                Explore the workflow
               </a>
             </div>
-            <span className="product-hero-caption">
-              From your first scene to the next episode.
-            </span>
           </div>
-          <div
-            className="product-preview"
+          <aside
+            className="landing-story"
             aria-label="Interactive storyboard preview"
           >
-            <div className="product-preview-top">
-              <span>
-                <BrandMark decorative />
-                dotori studio
-              </span>
-              <span>INTERACTIVE PREVIEW</span>
-            </div>
-            <div className="product-preview-workspace">
-              <div className="product-preview-rail" aria-hidden="true">
-                <Layers3 size={15} />
-                <span />
-                <span />
-                <span />
+            <div className="landing-story-heading">
+              <img src={demoMedia.maya} alt="" />
+              <div>
+                <h2>The reunion</h2>
+                <p>Episode 03 · The Last Letter</p>
               </div>
-              <div className="product-preview-body">
-                <div className="product-preview-heading">
-                  <span>
-                    MIDNIGHT SECRETS <ChevronRight size={10} /> EPISODE 01
-                  </span>
-                  <span className="product-saved">
-                    <Check size={10} /> Draft
-                  </span>
+            </div>
+            <nav aria-label="Preview the workflow">
+              {steps.map((step, index) => (
+                <button
+                  key={step.label}
+                  aria-label={`${index + 1} ${step.label}`}
+                  aria-current={stage === index ? "step" : undefined}
+                  onClick={() => explore(index)}
+                >
+                  <span>{index + 1}</span>
+                  <small>{step.label}</small>
+                </button>
+              ))}
+            </nav>
+          </aside>
+        </section>
+        <section
+          className="landing-workflow"
+          id="workflow"
+          aria-label="Filmmaking workflow"
+        >
+          {steps.map((step, index) => (
+            <article
+              className="landing-workflow-card"
+              key={step.title}
+              id={`workflow-${index + 1}`}
+              aria-label={step.title}
+            >
+              <header>
+                <span>{index + 1}</span>
+                <h2>
+                  <button onClick={() => explore(index)}>{step.title}</button>
+                </h2>
+              </header>
+              {index === 0 ? (
+                <div
+                  className="landing-screenplay"
+                  aria-label="Example scene screenplay"
+                >
+                  <div>INT. CAFE — DUSK</div>
+                  <ol>
+                    {screenplay.map((line, index) => (
+                      <li key={index}>
+                        <span>{line || "\u00a0"}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <div className="product-preview-title">
-                  <h2>The unlocked door</h2>
-                  <span>
-                    Script <b>Scenes</b> Edit
-                  </span>
-                </div>
-                <div className="product-scene-image">
+              ) : index === 1 ? (
+                <div className="landing-frame-demo">
                   <img
-                    src={scene.image}
-                    alt={`Illustrated storyboard for ${scene.title.toLowerCase()}`}
+                    className="landing-chosen-frame"
+                    src={frames[frame]}
+                    alt={`Starting frame ${String(frame + 1).padStart(2, "0")} preview`}
                   />
-                  <span className="product-image-label">
-                    SCENE {String(selected + 1).padStart(2, "0")}
-                  </span>
-                  <span className="product-image-duration">
-                    {scene.duration}
-                  </span>
-                  <div>
-                    <span>
-                      EPISODE 01 / SCENE {String(selected + 1).padStart(2, "0")}
-                    </span>
-                    <h3>{scene.title}</h3>
+                  <div
+                    className="landing-frame-choices"
+                    role="group"
+                    aria-label="Starting frame examples"
+                  >
+                    {frames.map((src, index) => (
+                      <button
+                        key={src}
+                        aria-label={`Preview frame ${index + 1}`}
+                        aria-pressed={frame === index}
+                        onClick={() => {
+                          setFrame(index);
+                          setStage(1);
+                        }}
+                      >
+                        <img src={src} alt="" />
+                        {frame === index && (
+                          <span>
+                            <Check size={13} />
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div
-                  className="product-scene-picker"
-                  role="group"
-                  aria-label="Preview a scene"
-                >
-                  {scenes.map((s, i) => (
-                    <button
-                      key={s.title}
-                      aria-label={`Preview ${s.title.toLowerCase()}`}
-                      aria-pressed={selected === i}
-                      onClick={() => setSelected(i)}
-                    >
-                      <img src={s.image} alt="" />
-                      <span>
-                        {String(i + 1).padStart(2, "0")}
-                        <b>{s.title}</b>
-                      </span>
-                    </button>
-                  ))}
+              ) : index === 2 ? (
+                <div className="landing-motion-demo">
+                  <MotionPreview onExplore={() => setStage(2)} />
                 </div>
-                <p className="product-preview-note" aria-live="polite">
-                  {scene.note}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-        <div className="product-principles product-container">
-          <span>YOUR STORY. YOUR DIRECTION.</span>
-          <p>
-            One connected workflow.
-            <span> A little less friction. A lot more filmmaking.</span>
-          </p>
-        </div>
-        <section
-          className="product-workflow product-container"
-          id="workflow"
-          aria-labelledby="workflow-heading"
-        >
-          <div className="product-section-heading">
-            <span className="product-eyebrow">FROM IDEA TO EPISODE</span>
-            <h2 id="workflow-heading">
-              Make room for
-              <br />
-              <em>the creative part.</em>
-            </h2>
-            <p>
-              Start with the story. Make the decisions that matter.
-              <br />
-              Keep every episode moving forward.
-            </p>
-          </div>
-          <div className="product-steps">
-            <article>
-              <span className="product-step-number">01</span>
-              <div>
-                <h3>Find your story.</h3>
-                <p>
-                  Give your idea a home. Develop the script, shape the dialogue,
-                  and build an episode you’re excited to make.
-                </p>
-              </div>
-              <span className="product-step-tag">SCRIPT</span>
+              ) : (
+                <div className="landing-edit-demo">
+                  <div className="landing-edit-frame">
+                    <img
+                      src={demoMedia.letter}
+                      alt="A sealed letter on the café table"
+                    />
+                  </div>
+                  <Filmstrip edit />
+                </div>
+              )}
+              <p>{step.detail}</p>
             </article>
-            <article>
-              <span className="product-step-number">02</span>
-              <div>
-                <h3>Set the scene.</h3>
-                <p>
-                  Break the episode into scenes. Review the action, timing, and
-                  direction before moving into production.
-                </p>
-              </div>
-              <span className="product-step-tag">SCENES</span>
-            </article>
-            <article>
-              <span className="product-step-number">03</span>
-              <div>
-                <h3>Make it yours.</h3>
-                <p>
-                  Choose your cast, looks, settings, and visual references.
-                  Review your takes and bring the right moments into the edit.
-                </p>
-              </div>
-              <span className="product-step-tag">CREATE & EDIT</span>
-            </article>
-          </div>
+          ))}
         </section>
         <section
-          className="product-world"
-          id="your-world"
-          aria-labelledby="world-heading"
+          className="landing-benefits"
+          aria-label="Made for your production"
         >
-          <div className="product-container product-world-inner">
-            <div
-              className="product-world-art"
-              aria-label="Example character looks"
-            >
-              <div className="product-character-card">
-                <img
-                  loading="lazy"
-                  src="/media/studio-front.svg"
-                  alt="Illustrated front portrait reference"
-                />
-                <span>
-                  THE CHARACTER<b>Maya</b>
-                </span>
-              </div>
-              <div className="product-look-card">
-                <img
-                  loading="lazy"
-                  src="/media/studio-look-winter.svg"
-                  alt="Illustrated winter wardrobe reference"
-                />
-                <span>
-                  THE LOOK<b>Winter in the city</b>
-                </span>
-              </div>
-              <span className="product-reference-label">
-                <Layers3 size={13} />
-                ONE WORLD. MANY STORIES.
-              </span>
-            </div>
-            <div className="product-world-copy">
-              <span className="product-eyebrow">A WORLD YOU CAN RETURN TO</span>
-              <h2 id="world-heading">
-                Same cast.
-                <br />
-                New possibilities.
-              </h2>
+          <article id="cast-continuity">
+            <UsersRound size={42} strokeWidth={1.1} />
+            <div>
+              <h2>Consistent cast</h2>
               <p>
-                Your characters don’t disappear when the episode ends. Build a
-                library of identities, looks, and places, then choose the
-                references that belong in each scene.
+                Keep characters, look, and mood consistent
+                <br className="landing-desktop-break" /> across every scene and
+                episode.
               </p>
-              <ul>
-                <li>
-                  <Check size={15} />
-                  Characters and looks in one place
-                </li>
-                <li>
-                  <Check size={15} />
-                  Scene-by-scene reference choices
-                </li>
-                <li>
-                  <Check size={15} />
-                  Space for your next episode
-                </li>
-              </ul>
-              <Link className="product-text-link" to="/login">
-                Meet your studio
-                <ArrowRight size={16} />
-              </Link>
             </div>
-          </div>
-        </section>
-        <section
-          className="product-questions product-container"
-          aria-labelledby="questions-heading"
-        >
-          <span className="product-eyebrow">BEFORE YOUR FIRST TAKE</span>
-          <h2 id="questions-heading">A few things to know.</h2>
-          <details>
-            <summary>
-              Can I work on a series?<span>+</span>
-            </summary>
-            <p>
-              Yes. Organize your work into projects and episodes, with a shared
-              character and reference library for the story world.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Do I need filmmaking experience?<span>+</span>
-            </summary>
-            <p>
-              The studio follows a guided Script → Scenes → Edit workflow. You
-              can review the story and scene plans before choosing references
-              and working with takes.
-            </p>
-          </details>
-          <details>
-            <summary>
-              What can I try today?<span>+</span>
-            </summary>
-            <p>
-              This is an interactive product demo. Explore the sample projects,
-              write and plan episodes, and try the local production workflow.
-              Sign-in, generation, credits, and recharge are simulated; no
-              payment is collected.
-            </p>
-          </details>
-        </section>
-        <section className="product-invitation product-container">
-          <Sparkles size={23} />
-          <span className="product-eyebrow">YOUR STORIES, IN MOTION</span>
-          <h2>
-            Every great story
-            <br />
-            starts with <em>“what if?”</em>
-          </h2>
-          <Link className="product-cta" to="/login">
-            Start your next story
-            <ArrowRight size={17} />
-          </Link>
-          <p>Explore the demo. Make something your own.</p>
+          </article>
+          <article>
+            <Clapperboard size={42} strokeWidth={1.1} />
+            <div>
+              <h2>Precise direction</h2>
+              <p>
+                Control camera, motion, and performance
+                <br className="landing-desktop-break" /> with filmmaker-friendly
+                tools.
+              </p>
+            </div>
+          </article>
+          <article id="for-studios">
+            <Layers size={42} strokeWidth={1.1} />
+            <div>
+              <h2>Built for episodes</h2>
+              <p>
+                From scene to sequence, keep your story
+                <br className="landing-desktop-break" /> organized and on track.
+              </p>
+            </div>
+          </article>
         </section>
       </main>
-      <footer className="product-footer product-container">
-        <Brand />
-        <span>One scene at a time.</span>
-        <a href="#top">Back to top ↑</a>
-        <Link to="/login">Log in</Link>
-      </footer>
     </div>
   );
 }

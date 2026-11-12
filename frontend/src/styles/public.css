@@ -1,0 +1,690 @@
+/* Public website and authentication use the studio palette, type and controls. */
+.ds-public {
+  --bg: #0d1419;
+  --sidebar: #0c1217;
+  --surface: #131b21;
+  --raised: #1c252d;
+  --border: #303b45;
+  --text: #f3f5f6;
+  --muted: #a9bac8;
+  --accent: #ffbf3f;
+  --accent-text: #201807;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+}
+.ds-public-header {
+  min-height: 76px;
+  padding: 0 5vw;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--sidebar);
+}
+.ds-public-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 17px;
+}
+.ds-public-brand .dotori-mark {
+  width: 31px;
+  height: 31px;
+}
+.ds-public-brand .dotori-wordmark {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+}
+.ds-public-header nav,
+.ds-public-header > div {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 13px;
+}
+.ds-public-header nav a {
+  color: var(--muted);
+}
+.ds-public-header nav a:hover {
+  color: var(--text);
+}
+.ds-public-hero {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 80px 5vw 65px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 55px;
+  align-items: center;
+}
+.ds-public-hero h1 {
+  font-size: clamp(34px, 4vw, 61px);
+  line-height: 1.14;
+  letter-spacing: -2px;
+  margin: 21px 0 24px;
+  font-weight: 600;
+}
+.ds-public-hero h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+.ds-public-hero > div > p {
+  font-size: 16px;
+  color: var(--muted);
+  line-height: 1.8;
+  max-width: 510px;
+}
+.ds-public-hero .ds-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+}
+.ds-public-hero .ds-eyebrow i {
+  width: 15px;
+  height: 2px;
+  background: var(--accent);
+}
+.ds-public-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+.ds-public-actions .ds-button {
+  min-height: 44px;
+  padding: 0 20px;
+}
+.ds-public-capabilities {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 23px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ds-public-capabilities span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.ds-public-capabilities svg {
+  color: var(--green);
+}
+.ds-public-preview {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 25px 90px #0005;
+}
+.ds-public-preview > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ds-public-preview > header > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.ds-public-preview .dotori-mark {
+  height: 20px;
+  width: 20px;
+}
+.ds-public-preview small {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.ds-public-preview > img {
+  width: 100%;
+  aspect-ratio: 1.65;
+  object-fit: cover;
+}
+.ds-public-preview-copy {
+  padding: 16px 18px 3px;
+}
+.ds-public-preview-copy h2 {
+  font-size: 25px;
+  margin-bottom: 5px;
+}
+.ds-public-preview-copy p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ds-public-preview-copy .ds-eyebrow {
+  font-size: 8px;
+  margin-bottom: 8px;
+}
+.ds-public-preview-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  padding: 16px;
+}
+.ds-public-preview-picker button {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+}
+.ds-public-preview-picker button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.ds-public-preview-picker img {
+  width: 100%;
+  aspect-ratio: 1.9;
+  object-fit: cover;
+}
+.ds-public-preview-picker span {
+  display: block;
+  padding: 7px;
+  font-size: 9px;
+}
+.ds-public-section {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 65px 5vw;
+}
+.ds-public-section > header {
+  margin-bottom: 28px;
+}
+.ds-public-section h2,
+.ds-public-world h2 {
+  font-size: 34px;
+  letter-spacing: -0.8px;
+  margin: 10px 0 14px;
+}
+.ds-public-section > header > p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.ds-public-workflow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.ds-public-workflow article {
+  padding: 0 0 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+.ds-public-workflow article > img {
+  width: 100%;
+  aspect-ratio: 1.8;
+  object-fit: cover;
+  object-position: center 35%;
+}
+.ds-public-workflow article > div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--accent);
+  margin: 16px 18px 10px;
+}
+.ds-public-workflow article h3 {
+  font-size: 17px;
+  margin: 0 18px 10px;
+}
+.ds-public-workflow article p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0 18px;
+}
+.ds-public-step-number {
+  font-size: 13px;
+}
+.ds-public-world {
+  max-width: 1520px;
+  padding: 65px 5vw;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+  align-items: center;
+}
+.ds-public-world-art {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-bottom: 47px;
+}
+.ds-public-world-art > img {
+  width: 100%;
+  aspect-ratio: 0.78;
+  object-fit: cover;
+  object-position: center 30%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.ds-public-world-art > span {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.ds-public-world p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.ds-public-world ul {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 25px 0;
+}
+.ds-public-world li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.ds-public-world li svg {
+  color: var(--green);
+}
+.ds-public-productions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.ds-public-productions > a {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  padding-bottom: 18px;
+}
+.ds-public-productions img {
+  width: 100%;
+  aspect-ratio: 1.75;
+  object-fit: cover;
+}
+.ds-public-productions h3 {
+  font-size: 19px;
+  margin: 16px 18px 6px;
+}
+.ds-public-productions p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 18px;
+}
+.ds-public-faq details {
+  border-top: 1px solid var(--border);
+  padding: 20px 0;
+}
+.ds-public-faq summary {
+  cursor: pointer;
+  font-size: 16px;
+}
+.ds-public-faq details p {
+  font-size: 13px;
+  max-width: 800px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-top: 16px;
+}
+.ds-public-invitation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 65px 24px 85px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.ds-public-invitation > svg {
+  color: var(--accent);
+}
+.ds-public-invitation h2 {
+  font-size: 36px;
+  letter-spacing: -1px;
+}
+.ds-public-invitation p {
+  color: var(--muted);
+  font-size: 15px;
+}
+.ds-public-invitation .ds-button {
+  min-height: 44px;
+  padding: 0 24px;
+}
+.ds-public-footer {
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 25px 5vw;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Shared authentication frame; configured providers render inside the same card. */
+.ds-auth .ds-public-header {
+  min-height: 68px;
+  padding: 0 24px;
+}
+.ds-auth-layout {
+  display: grid;
+  grid-template-columns: 56% 44%;
+  min-height: calc(100dvh - 68px);
+}
+.ds-auth-story {
+  position: relative;
+  min-height: 700px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.ds-auth-story > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.ds-auth-story::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 35%, #071017d9 70%, #071017 95%);
+}
+.ds-auth-story > div {
+  position: relative;
+  z-index: 1;
+  padding: 45px;
+  width: 100%;
+}
+.ds-auth-story h1 {
+  font-size: clamp(32px, 3.4vw, 50px);
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+  margin-bottom: 16px;
+}
+.ds-auth-story p {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+  max-width: 570px;
+}
+.ds-auth-filmstrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 28px;
+}
+.ds-auth-filmstrip figure {
+  margin: 0;
+}
+.ds-auth-filmstrip img {
+  width: 100%;
+  aspect-ratio: 1.75;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.ds-auth-filmstrip figure:first-child img {
+  border-color: var(--accent);
+}
+.ds-auth-filmstrip figcaption {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.ds-auth-form-panel {
+  display: grid;
+  place-items: center;
+  padding: 45px;
+  border-left: 1px solid var(--border);
+}
+.ds-auth-card {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 40px 34px;
+  background: var(--surface);
+  text-align: center;
+}
+.ds-auth-card > .dotori-mark {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 25px;
+}
+.ds-auth-card > h2 {
+  font-size: 29px;
+  letter-spacing: -0.6px;
+}
+.ds-auth-card > p {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 13px;
+}
+.ds-auth-social {
+  display: grid;
+  gap: 10px;
+  margin-top: 30px;
+}
+.ds-auth-social button {
+  background: var(--raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  min-height: 45px;
+  font-size: 13px;
+  gap: 12px;
+}
+.ds-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.ds-auth-divider > span {
+  height: 1px;
+  background: var(--border);
+  flex: 1;
+}
+.ds-auth-card:not(.is-provider) form {
+  display: grid;
+  gap: 18px;
+  text-align: left;
+}
+.ds-auth-card .ds-field {
+  font-size: 12px;
+}
+.ds-auth-card:not(.is-provider) input {
+  width: 100%;
+  min-height: 42px;
+  background: var(--raised);
+}
+.ds-auth-card:not(.is-provider) form > .ds-button {
+  min-height: 45px;
+  margin-top: 8px;
+}
+.ds-auth-password {
+  position: relative;
+}
+.ds-auth-password input {
+  padding-right: 42px;
+}
+.ds-auth-password button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.ds-auth-card > .ds-auth-demo-note {
+  font-size: 10px;
+  line-height: 1.8;
+  margin-top: 25px;
+}
+.ds-auth-card.is-provider {
+  padding: 0;
+  overflow: hidden;
+}
+.ds-auth-card.is-provider > [role="alert"] {
+  padding: 32px 24px;
+}
+@media (max-width: 1100px) {
+  .ds-public-header nav {
+    gap: 16px;
+  }
+  .ds-public-hero {
+    gap: 30px;
+    padding-top: 55px;
+  }
+  .ds-public-world {
+    gap: 35px;
+  }
+  .ds-auth-form-panel {
+    padding: 25px;
+  }
+  .ds-auth-card {
+    padding: 32px 24px;
+  }
+  .ds-auth-story > div {
+    padding: 30px;
+  }
+  .ds-auth-card > h2 {
+    font-size: 24px;
+  }
+}
+@media (max-width: 767px) {
+  .ds-public-header {
+    padding: 0 20px;
+    min-height: 65px;
+    gap: 12px;
+  }
+  .ds-public-header nav {
+    display: none;
+  }
+  .ds-public-header > div {
+    gap: 13px;
+  }
+  .ds-public-header .ds-button {
+    font-size: 11px;
+    padding: 0 10px;
+  }
+  .ds-public-brand {
+    gap: 10px;
+  }
+  .ds-public-brand .dotori-wordmark {
+    font-size: 17px;
+  }
+  .ds-public-brand .dotori-mark {
+    width: 26px;
+    height: 26px;
+  }
+  .ds-public-hero {
+    grid-template-columns: 1fr;
+    padding: 45px 20px;
+    gap: 35px;
+  }
+  .ds-public-hero h1 {
+    font-size: 39px;
+    letter-spacing: -1.4px;
+  }
+  .ds-public-hero > div > p {
+    font-size: 14px;
+  }
+  .ds-public-preview {
+    max-width: 600px;
+  }
+  .ds-public-section {
+    padding: 40px 20px;
+  }
+  .ds-public-section h2,
+  .ds-public-world h2 {
+    font-size: 28px;
+  }
+  .ds-public-workflow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .ds-public-workflow article h3 {
+    font-size: 15px;
+  }
+  .ds-public-workflow article p {
+    font-size: 11px;
+  }
+  .ds-public-world {
+    grid-template-columns: 1fr;
+    padding: 40px 20px;
+    gap: 28px;
+  }
+  .ds-public-world-art {
+    max-width: 480px;
+  }
+  .ds-public-productions {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ds-public-invitation h2 {
+    font-size: 29px;
+  }
+  .ds-public-footer {
+    flex-wrap: wrap;
+    padding: 25px 20px;
+  }
+  .ds-public-footer > span {
+    display: none;
+  }
+  .ds-auth-layout {
+    grid-template-columns: 1fr;
+  }
+  .ds-auth-story {
+    min-height: 380px;
+  }
+  .ds-auth-story > div {
+    padding: 24px;
+  }
+  .ds-auth-story h1 {
+    font-size: 32px;
+  }
+  .ds-auth-story p {
+    font-size: 13px;
+  }
+  .ds-auth-filmstrip {
+    display: none;
+  }
+  .ds-auth-form-panel {
+    padding: 24px 20px 40px;
+    border-left: 0;
+  }
+  .ds-auth-card {
+    padding: 30px 24px;
+  }
+  .ds-auth .ds-public-header {
+    padding: 0 20px;
+  }
+  .ds-public-header > .ds-text {
+    font-size: 11px;
+  }
+}

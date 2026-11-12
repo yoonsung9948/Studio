@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"nori/studio/server/internal/ownership"
 	"nori/studio/server/internal/platform/db"
 )
 
@@ -31,4 +32,8 @@ func (a *App) Close() {
 
 func (a *App) Migrate(ctx context.Context) error {
 	return db.Migrate(ctx, a.pool)
+}
+
+func (a *App) ClaimLegacy(ctx context.Context, userID string) error {
+	return ownership.ClaimLegacy(ctx, a.pool, userID)
 }

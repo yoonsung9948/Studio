@@ -114,7 +114,7 @@ func (o *Operation) Step(ctx context.Context, run engine.Run) (engine.Outcome, e
 		return engine.Done{
 			Provider: provider,
 			Model:    model,
-			Artifacts: []engine.ArtifactDraft{{Kind: "video", SchemaVersion: 1, Content: mustJSON(Result{
+			Artifacts: []engine.ArtifactDraft{{Kind: "video", SchemaVersion: 1, Media: &engine.MediaDraft{Kind: "video", FileKey: info.Key, ContentType: info.ContentType, SizeBytes: info.Size}, Content: mustJSON(Result{
 				FileKey:         info.Key,
 				ContentType:     info.ContentType,
 				SizeBytes:       info.Size,

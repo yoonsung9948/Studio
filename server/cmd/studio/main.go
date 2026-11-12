@@ -24,8 +24,9 @@ func run(logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	migrate := len(os.Args) == 2 && os.Args[1] == "migrate"
-	if len(os.Args) > 1 && !migrate {
-		return errors.New("usage: studio [migrate]")
+	claimLegacy := len(os.Args) == 3 && os.Args[1] == "claim-legacy"
+	if len(os.Args) > 1 && !migrate && !claimLegacy {
+		return errors.New("usage: studio [migrate | claim-legacy USER_ID]")
 	}
 	cfg, err := app.LoadConfig()
 	if err != nil {
@@ -38,6 +39,9 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	defer a.Close()
+	if claimLegacy {
+		return a.ClaimLegacy(startup, os.Args[2])
+	}
 	if migrate {
 		return a.Migrate(startup)
 	}

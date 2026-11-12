@@ -510,12 +510,16 @@ export function GenerationDialog({
                             }
                           >
                             <option value="">Canonical identity</option>
-                            {characterLooks(d, a.characterId).map((l) => (
-                              <option value={l.id} key={l.id}>
-                                {l.name}
-                                {lookReady(d, l.id) ? "" : " · needs approval"}
-                              </option>
-                            ))}
+                            {characterLooks(d, a.characterId, sc.episodeId).map(
+                              (l) => (
+                                <option value={l.id} key={l.id}>
+                                  {l.name}
+                                  {lookReady(d, l.id)
+                                    ? ""
+                                    : " · needs approval"}
+                                </option>
+                              ),
+                            )}
                           </select>
                         </label>
                       </div>
@@ -639,7 +643,7 @@ export function GenerationDialog({
                         <b>{c.name}</b>
                         <small>
                           {characterReady(d, c.id)
-                            ? `${characterLooks(d, c.id).length} Looks available`
+                            ? `${characterLooks(d, c.id, sc.episodeId).length} Looks available`
                             : "Identity needs approval"}
                         </small>
                       </button>

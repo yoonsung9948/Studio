@@ -1,3 +1,4 @@
+import { upgradeDemoMedia } from "./demo-media";
 import { migrateWorkflow } from "../domain/workflow";
 import { type Data } from "../domain/types";
 import { enhanceStudio, emptyStudio } from "./studio-seed";
@@ -241,5 +242,6 @@ export function seed(): Data {
   };
   enhanceStudio(d, true);
   migrateWorkflow(d);
+  upgradeDemoMedia(d);
   return d;
 }

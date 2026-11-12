@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"nori/studio/server/internal/assets"
+	"nori/studio/server/internal/platform/apperr"
 	"nori/studio/server/internal/platform/blob"
 )
 
@@ -25,7 +27,7 @@ func newFileAPI(t *testing.T) (http.Handler, string) {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(Services{Files: store}, logger, func(context.Context) error { return nil }), dir
+	return New(Services{Files: store, Assets: stubAssets{}, Accounts: &stubAccounts{}, Authenticate: testAuthentication}, logger, func(context.Context) error { return nil }), dir
 }
 
 func serve(h http.Handler, method, path string, headers map[string]string) *httptest.ResponseRecorder {
@@ -47,7 +49,7 @@ func TestServeFile(t *testing.T) {
 	for header, want := range map[string]string{
 		"Content-Type":            "video/mp4",
 		"Content-Security-Policy": "sandbox",
-		"Cache-Control":           "private, no-cache",
+		"Cache-Control":           "private, no-store",
 		"Accept-Ranges":           "bytes",
 	} {
 		if got := w.Header().Get(header); got != want {
@@ -84,4 +86,22 @@ func TestServeFileNotFound(t *testing.T) {
 			t.Errorf("%s: status=%d body=%q", path, w.Code, w.Body)
 		}
 	}
+}
+
+type stubAssets struct{}
+
+func (stubAssets) Get(context.Context, string, string) (assets.Detail, error) {
+	return assets.Detail{}, apperr.ErrNotFound
+}
+func (stubAssets) List(context.Context, string, assets.ListParams) (assets.Page, error) {
+	return assets.Page{Items: []assets.Asset{}}, nil
+}
+func (stubAssets) File(context.Context, string, string) (assets.File, error) {
+	return assets.File{}, apperr.ErrNotFound
+}
+func (stubAssets) FileByKey(_ context.Context, _ string, key string) (assets.File, error) {
+	if key != "projects/p1/clip.mp4" {
+		return assets.File{}, apperr.ErrNotFound
+	}
+	return assets.File{StorageKey: key}, nil
 }

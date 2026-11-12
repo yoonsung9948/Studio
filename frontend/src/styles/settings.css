@@ -1,0 +1,733 @@
+/* Workspace preferences share the persistent studio shell and color tokens. */
+.settings-page.ds-page {
+  padding: 28px 28px 24px;
+  overflow: auto;
+  height: 100%;
+  scrollbar-width: thin;
+}
+.settings-page > h1 {
+  font-size: 34px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.6px;
+  margin: 6px 0 13px;
+}
+.settings-tabs {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  gap: 9px;
+  min-height: 46px;
+  margin-bottom: 18px;
+}
+.settings-tabs > button {
+  padding: 0 20px;
+  font-size: 16px;
+  color: var(--muted);
+  border-bottom: 3px solid transparent;
+}
+.settings-tabs > button[aria-pressed="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 550;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.88fr) minmax(340px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.settings-primary-column {
+  min-width: 0;
+}
+.settings-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--surface) 45%, transparent),
+    color-mix(in srgb, var(--bg) 80%, transparent)
+  );
+  padding: 23px 25px;
+}
+.settings-page h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  letter-spacing: -0.15px;
+}
+.settings-page header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.settings-main {
+  min-height: 750px;
+  padding: 20px 26px 26px;
+}
+.settings-section + .settings-section {
+  border-top: 1px solid var(--border);
+  margin-top: 26px;
+  padding-top: 17px;
+}
+.settings-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 17px;
+}
+.settings-choices > button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 78px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 13px 15px;
+  background: transparent;
+  text-align: left;
+}
+.settings-choices > button > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.settings-choices > button > span:last-child {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.settings-choices small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.settings-choices > button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.settings-choices > button[aria-pressed="true"] > svg {
+  color: var(--text);
+}
+.settings-radio {
+  height: 20px;
+  width: 20px;
+  flex-shrink: 0;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.settings-choices > button[aria-pressed="true"] .settings-radio {
+  border: 2px solid var(--accent);
+}
+.settings-choices > button[aria-pressed="true"] .settings-radio::after {
+  content: "";
+  height: 10px;
+  width: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+  cursor: pointer;
+}
+.settings-toggle > span {
+  min-width: 0;
+}
+.settings-toggle b {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.settings-toggle small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.settings-page .settings-toggle input[role="switch"] {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 29px;
+  min-height: 0;
+  border: 1px solid var(--control-border, var(--border));
+  border-radius: 20px;
+  background: var(--raised);
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.settings-toggle input[role="switch"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 21px;
+  height: 21px;
+  background: #e7f0f5;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px #0006;
+}
+.settings-page .settings-toggle input[role="switch"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.settings-toggle input[role="switch"]:checked::before {
+  left: 26px;
+  background: #112634;
+}
+.settings-page button:focus-visible,
+.settings-page input:focus-visible,
+.settings-page summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.settings-behavior .settings-toggle + .settings-toggle {
+  border-top: 1px solid var(--border);
+  margin-top: 9px;
+  padding-top: 0;
+  min-height: 70px;
+}
+.settings-autosave-note {
+  margin: 13px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.settings-keyboard {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) minmax(270px, 1.25fr);
+  gap: 15px;
+}
+.settings-keyboard header {
+  padding-top: 0;
+}
+.settings-keyboard header h2 {
+  font-size: 15px;
+  font-weight: 500;
+}
+.settings-keyboard header p {
+  font-size: 12px;
+}
+.settings-shortcuts {
+  display: grid;
+}
+.settings-shortcuts > div {
+  display: flex;
+  gap: 7px;
+  align-items: start;
+  padding: 6px 0 13px;
+}
+.settings-shortcuts > div + div {
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+  padding-bottom: 0;
+}
+.settings-shortcuts kbd {
+  display: grid;
+  place-items: center;
+  height: 36px;
+  width: 39px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: 14px/1 inherit;
+  background: color-mix(in srgb, var(--raised) 50%, transparent);
+  margin: 0;
+  flex-shrink: 0;
+}
+.settings-shortcuts span {
+  margin-left: 15px;
+  font-size: 13px;
+  padding-top: 1px;
+}
+.settings-shortcuts small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.settings-aside {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.settings-account-summary {
+  padding: 20px 23px 22px;
+}
+.settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 18px 0;
+  min-width: 0;
+}
+.settings-profile > img,
+.settings-profile-initial {
+  height: 98px;
+  width: 98px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 30%;
+  border: 1px solid var(--control-border, var(--border));
+}
+.settings-profile-initial {
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  background: var(--raised);
+}
+.settings-profile > div {
+  min-width: 0;
+}
+.settings-profile h3 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.settings-profile p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.settings-account-fact {
+  padding: 13px 0 17px;
+  border-top: 1px solid var(--border);
+}
+.settings-account-fact > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 15px;
+}
+.settings-account-fact b {
+  font-weight: 500;
+}
+.settings-account-fact strong {
+  font-size: 17px;
+  color: var(--accent);
+  font-weight: 550;
+}
+.settings-account-fact p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.settings-account-summary > .ds-button {
+  position: relative;
+  width: 100%;
+  min-height: 38px;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.settings-account-summary > .ds-button svg {
+  position: absolute;
+  right: 14px;
+}
+.settings-notifications {
+  padding: 17px 23px 15px;
+}
+.settings-notifications header p {
+  font-size: 12px;
+}
+.settings-notification-options .settings-toggle {
+  min-height: 59px;
+  gap: 10px;
+}
+.settings-notification-options .settings-toggle + .settings-toggle {
+  border-top: 1px solid var(--border);
+}
+.settings-notification-options .settings-toggle b {
+  font-size: 13px;
+}
+.settings-notification-options .settings-toggle small {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 1px;
+}
+.settings-notifications .settings-toggle input[role="switch"] {
+  width: 48px;
+  height: 27px;
+}
+.settings-notifications .settings-toggle input[role="switch"]::before {
+  width: 19px;
+  height: 19px;
+}
+.settings-notifications .settings-toggle input[role="switch"]:checked::before {
+  left: 25px;
+}
+.settings-save-state {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 16px 21px;
+  min-height: 56px;
+  font-size: 13px;
+}
+.settings-save-state > span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-save-state > span > svg {
+  background: var(--green);
+  color: var(--bg);
+  padding: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.settings-save-state.has-error > span > svg {
+  color: var(--danger);
+  background: transparent;
+  padding: 0;
+}
+.settings-save-state > button {
+  font-size: 11px;
+  white-space: nowrap;
+  gap: 6px;
+  padding: 0;
+}
+.settings-policy {
+  padding: 18px 22px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+}
+.settings-policy summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.settings-policy > p {
+  margin: 15px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.settings-policy > select {
+  width: 100%;
+  font-size: 13px;
+}
+.settings-main-account,
+.settings-main-notifications,
+.settings-main-team {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.settings-main-account .settings-profile,
+.settings-main-team .settings-profile {
+  margin: 0;
+}
+.settings-main-account > .ds-button,
+.settings-main-notifications > .ds-button,
+.settings-main-team > .ds-button {
+  width: fit-content;
+}
+.settings-account-fields {
+  display: grid;
+  gap: 18px;
+  max-width: 500px;
+}
+.settings-account-fields > label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.settings-account-fields input {
+  width: 100%;
+}
+.settings-muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.settings-main-notifications .settings-toggle {
+  min-height: 80px;
+}
+.settings-team-member {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 18px;
+}
+.settings-team-member > span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.settings-team-info {
+  display: flex;
+  align-items: start;
+  gap: 18px;
+  padding: 22px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+}
+.settings-team-info svg {
+  flex-shrink: 0;
+}
+.settings-team-info h3 {
+  font-size: 17px;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.settings-team-info p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+}
+.settings-help {
+  display: grid;
+  gap: 20px;
+}
+.settings-help > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.settings-help .settings-shortcuts > div {
+  padding: 14px 0;
+}
+.settings-section.settings-behavior {
+  padding-top: 2px;
+}
+.settings-behavior > .settings-toggle:first-child {
+  min-height: 58px;
+}
+.density-compact .settings-page {
+  padding: 20px;
+}
+.density-compact .settings-choices > button {
+  min-height: 66px;
+}
+.density-spacious .settings-page {
+  padding: 32px;
+}
+.density-spacious .settings-choices > button {
+  min-height: 88px;
+}
+@media (max-width: 1350px) {
+  .settings-page.ds-page {
+    padding: 24px;
+  }
+  .settings-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+  }
+  .settings-main {
+    padding: 22px;
+  }
+  .settings-choices {
+    gap: 9px;
+  }
+  .settings-choices > button {
+    padding: 11px;
+    gap: 9px;
+  }
+  .settings-choices > button > svg {
+    width: 25px;
+  }
+  .settings-choices small {
+    font-size: 11px;
+    white-space: normal;
+  }
+  .settings-choices > button > span:last-child {
+    font-size: 13px;
+  }
+  .settings-radio {
+    height: 17px;
+    width: 17px;
+  }
+  .settings-choices > button[aria-pressed="true"] .settings-radio::after {
+    height: 9px;
+    width: 9px;
+  }
+  .settings-keyboard {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .settings-profile {
+    gap: 16px;
+  }
+  .settings-profile > img,
+  .settings-profile-initial {
+    height: 78px;
+    width: 78px;
+  }
+  .settings-profile h3 {
+    font-size: 18px;
+  }
+  .settings-account-summary,
+  .settings-notifications {
+    padding: 20px;
+  }
+  .settings-save-state {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px;
+  }
+}
+@media (max-width: 1050px) {
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .settings-main {
+    min-height: 0;
+  }
+  .settings-keyboard {
+    grid-template-columns: 1fr 1.25fr;
+  }
+  .settings-choices > button {
+    gap: 14px;
+  }
+  .settings-choices small {
+    white-space: nowrap;
+  }
+  .settings-aside {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .settings-save-state {
+    grid-column: 1/-1;
+    flex-wrap: nowrap;
+  }
+  .settings-main-account,
+  .settings-main-notifications,
+  .settings-main-team {
+    min-height: 420px;
+  }
+}
+@media (max-width: 600px) {
+  .settings-page.ds-page {
+    padding: 20px 16px;
+  }
+  .settings-page > h1 {
+    font-size: 28px;
+    margin: 0 0 16px;
+  }
+  .settings-tabs {
+    gap: 0;
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+  .settings-tabs > button {
+    padding: 0 13px;
+    font-size: 13px;
+    min-height: 43px;
+  }
+  .settings-panel {
+    padding: 20px 16px;
+  }
+  .settings-page h2 {
+    font-size: 17px;
+  }
+  .settings-page header p {
+    font-size: 13px;
+  }
+  .settings-choices {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+  .settings-choices > button {
+    min-height: 68px;
+    gap: 17px;
+    padding: 12px 16px;
+  }
+  .settings-choices > button > span:last-child {
+    font-size: 14px;
+  }
+  .settings-choices small {
+    font-size: 12px;
+  }
+  .settings-choices > button > svg {
+    width: 28px;
+  }
+  .settings-section + .settings-section {
+    margin-top: 22px;
+    padding-top: 20px;
+  }
+  .settings-toggle {
+    gap: 12px;
+  }
+  .settings-toggle small {
+    font-size: 12px;
+  }
+  .settings-keyboard {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .settings-shortcuts span {
+    margin-left: 8px;
+  }
+  .settings-shortcuts kbd {
+    height: 32px;
+    width: 33px;
+  }
+  .settings-aside {
+    grid-template-columns: 1fr;
+  }
+  .settings-save-state {
+    flex-wrap: wrap;
+  }
+  .settings-profile > img,
+  .settings-profile-initial {
+    height: 78px;
+    width: 78px;
+  }
+  .settings-profile h3 {
+    font-size: 19px;
+  }
+  .settings-team-member {
+    align-items: start;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .settings-team-member .settings-profile {
+    gap: 12px;
+  }
+  .settings-team-member .settings-profile img,
+  .settings-team-member .settings-profile-initial {
+    width: 60px;
+    height: 60px;
+  }
+  .settings-team-info {
+    padding: 16px;
+    gap: 12px;
+  }
+  .settings-policy {
+    padding: 17px 16px;
+  }
+  .settings-section.settings-behavior {
+    padding-top: 10px;
+  }
+  .density-compact .settings-page {
+    padding: 16px 12px;
+  }
+  .density-spacious .settings-page {
+    padding: 24px 18px;
+  }
+}

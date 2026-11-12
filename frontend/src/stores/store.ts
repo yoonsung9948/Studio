@@ -1,3 +1,5 @@
+import { upgradeDemoMedia } from "../mocks/demo-media";
+import { migrateProduce } from "../domain/produce";
 import { migrateWorkflow } from "../domain/workflow";
 import { enhanceStudio } from "../mocks/studio-seed";
 import { create } from "zustand";
@@ -7,6 +9,9 @@ import { seed } from "../mocks/seed";
 import { active } from "../domain/selectors";
 import { type Data, type UI } from "../domain/types";
 const KEY = "nori-demo-v1";
+let workspaceEpoch = 0;
+export const currentWorkspaceEpoch = () => workspaceEpoch;
+let workspaceStorageKey: string | undefined = KEY;
 const defaultUI: UI = {
   theme: "dark",
   collapsed: false,
@@ -23,10 +28,12 @@ export function recover(raw: string | null): {
   try {
     if (!raw) return { data: seed(), ui: defaultUI, resume: false, notice: "" };
     const saved = JSON.parse(raw);
-    if (![1, 2, 3].includes(saved.version)) throw Error();
+    if (![1, 2, 3, 4].includes(saved.version)) throw Error();
     if (saved.version === 1) enhanceStudio(saved.data, false);
     if (saved.version < 3) migrateWorkflow(saved.data);
     const d = dataSchema.parse(saved.data);
+    if (saved.version < 4) migrateProduce(d);
+    upgradeDemoMedia(d);
     validateRelations(d);
     const ui = uiSchema.parse(saved.ui);
     for (const a of Object.values(d.assets))
@@ -147,6 +154,7 @@ interface Store {
   ui: UI;
   paused: boolean;
   notice: string;
+  noticeId: number;
   storageFailed: boolean;
   past: History[];
   future: History[];
@@ -163,6 +171,7 @@ export const useStore = create<Store>((set, get) => ({
   ui: { ...initial.ui, aiOpen: false },
   paused: initial.resume,
   notice: initial.notice,
+  noticeId: 0,
   storageFailed: false,
   past: [],
   future: [],
@@ -206,7 +215,8 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
   setUI: (patch) => set({ ui: { ...get().ui, ...patch } }),
-  setNotice: (notice) => set({ notice }),
+  setNotice: (notice) =>
+    set((state) => ({ notice, noticeId: state.noticeId + 1 })),
   resume: () => set({ paused: false }),
   undo: () => {
     const { past, data, future } = get();
@@ -247,7 +257,11 @@ useStore.subscribe((s) => {
         c.reference = "/media/maya.svg";
         c.approved = false;
       }
-    localStorage.setItem(KEY, JSON.stringify({ version: 3, data, ui: s.ui }));
+    if (workspaceStorageKey)
+      localStorage.setItem(
+        workspaceStorageKey,
+        JSON.stringify({ version: 4, data, ui: s.ui }),
+      );
   } catch {
     if (!saveFailed) {
       saveFailed = true;
@@ -262,3 +276,61 @@ useStore.subscribe((s) => {
     }
   }
 });
+
+/** Replace all in-memory state, including undo history, before mounting another account. */
+export function activateWorkspace(ownerId: string | null) {
+  workspaceEpoch++;
+  for (const asset of Object.values(useStore.getState().data.assets)) {
+    if (asset.url.startsWith("blob:")) URL.revokeObjectURL?.(asset.url);
+  }
+  workspaceStorageKey = ownerId ? `${KEY}:user:${ownerId}` : undefined;
+  let raw: string | null = null;
+  try {
+    if (workspaceStorageKey) raw = localStorage.getItem(workspaceStorageKey);
+  } catch {
+    /* Use an empty workspace. */
+  }
+  const restored = recover(raw);
+  useStore.setState({
+    data: restored.data,
+    ui: { ...restored.ui, aiOpen: false },
+    paused: restored.resume,
+    notice: restored.notice,
+    past: [],
+    future: [],
+    storageFailed: false,
+  });
+}
+
+export function beginServerWorkspace() {
+  workspaceEpoch++;
+  workspaceStorageKey = undefined;
+  const backend = useStore.getState().data.backend;
+  useStore.setState({
+    data: {
+      projects: {},
+      episodes: {},
+      scenes: {},
+      shots: {},
+      takes: {},
+      assets: {},
+      jobs: {},
+      threads: {},
+      proposals: {},
+      exports: {},
+      characters: {},
+      credits: 0,
+      studio: {
+        looks: {},
+        references: {},
+        versions: {},
+        locations: {},
+        setups: {},
+      },
+      backend,
+    },
+    past: [],
+    future: [],
+    paused: true,
+  });
+}

@@ -4,14 +4,29 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"nori/studio/server/internal/assets"
+	"nori/studio/server/internal/production"
+	"nori/studio/server/internal/references"
+	"strings"
 	"time"
 )
 
 // Services are what the API's handlers call.
 type Services struct {
-	Projects ProjectService
-	Jobs     JobService
-	Files    FileStore
+	Media        *assets.MediaService
+	References   *references.Service
+	Production   *production.Service
+	Billing      BillingService
+	Characters   CharacterService
+	Images       ImageJobService
+	Requests     RequestService
+	Projects     ProjectService
+	Jobs         JobService
+	Files        FileStore
+	Assets       AssetService
+	Downloads    *DownloadSigner
+	Accounts     AccountService
+	Authenticate func(http.Handler) http.Handler
 }
 
 // New returns the HTTP handler for the whole API.
@@ -23,13 +38,42 @@ func New(s Services, logger *slog.Logger, ready func(context.Context) error) htt
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	mux.HandleFunc("GET /readyz", readiness(ready))
-	projectHandlers{service: s.Projects, respond: r}.routes(mux)
-	jobHandlers{service: s.Jobs, respond: r}.routes(mux)
-	fileHandlers{store: s.Files, respond: r}.routes(mux)
+	api := http.NewServeMux()
+	api.HandleFunc("GET /api/v1/me", currentAccount)
+	mux.Handle("/api/v1/", requireAccount(s.Accounts, s.Authenticate, r, api))
+	projectHandlers{service: s.Projects, respond: r}.routes(api)
+	if s.Production != nil {
+		productionRoutes(api, s.Production, r)
+	}
+	requestHandlers{service: s.Requests, respond: r}.routes(api)
+	jobHandlers{service: s.Jobs, respond: r}.routes(api)
+	if s.References != nil {
+		referenceRoutes(api, s.References, r)
+	}
+	if s.Media != nil {
+		mediaRoutes(api, s.Media, r)
+	}
+	if s.Images != nil {
+		imageHandlers{service: s.Images, respond: r}.routes(api)
+	}
+	if s.Characters != nil {
+		characterHandlers{service: s.Characters, respond: r}.routes(api)
+	}
+	if s.Billing != nil {
+		billingHandlers{service: s.Billing, respond: r}.routes(api)
+	}
+	files := fileHandlers{store: s.Files, assets: s.Assets, signer: s.Downloads, respond: r}
+	files.routes(api)
+	assetHandlers{service: s.Assets, signer: s.Downloads, respond: r}.routes(api)
+	mux.HandleFunc("GET /api/v1/downloads/{fileId}", files.signedFile)
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+		timeout := 10 * time.Second
+		if req.Method == http.MethodPost && strings.HasSuffix(req.URL.Path, "/uploads") {
+			timeout = 2 * time.Minute
+		}
+		ctx, cancel := context.WithTimeout(req.Context(), timeout)
 		defer cancel()
 		mux.ServeHTTP(w, req.WithContext(ctx))
 	})

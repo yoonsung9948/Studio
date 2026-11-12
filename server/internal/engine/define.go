@@ -19,7 +19,7 @@ type Def[In, Out Validator] struct {
 	Queue         string
 	Provider      string
 	Model         string
-	OutputKind    string // artifact kind, e.g. "creative_brief"
+	OutputKind    string // artifact kind, e.g. "request_interpretation"
 	OutputVersion int
 	// Normalize adjusts input before validation, e.g. trimming whitespace. Optional.
 	Normalize func(*In)

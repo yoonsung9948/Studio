@@ -1,11 +1,16 @@
 import { reviseEpisodeScript, scenePlanApproved } from "./workflow";
 import {
   completeStudioJob,
+  deleteLook,
   enqueueStudio,
+  targetInfo,
   studioProposal,
   applyStudioProposal,
 } from "./studio-commands";
-import { generationInputSnapshot } from "./generation-inputs";
+import {
+  craftInstructions,
+  generationInputSnapshot,
+} from "./generation-inputs";
 import { scenePreflight, referenceSnapshot } from "./scene-preflight";
 import {
   CONFIG,
@@ -68,7 +73,11 @@ export function enqueueGeneration(d: Data, ids: string[], replacement = false) {
       revision: s.revision,
       replacement,
       references: referenceSnapshot(d, s.id),
-      inputs: generationInputSnapshot(d, s.id),
+      inputs: generationInputSnapshot(
+        d,
+        s.id,
+        w.operation === "video" ? "video" : "image",
+      ),
       dependencyShotId: w.operation === "video" ? s.dependsOn : undefined,
     };
     d.jobs[j.id] = j;
@@ -89,7 +98,7 @@ export function enqueueFrameImage(
   if (d.credits < CONFIG.imageCost) throw Error("Not enough demo credits.");
   const scene = d.scenes[shot.sceneId],
     episode = d.episodes[scene.episodeId];
-  const inputs = generationInputSnapshot(d, shotId);
+  const inputs = generationInputSnapshot(d, shotId, "image");
   const job: GenerationJob = {
     id: uid("frame-job"),
     projectId: episode.projectId,
@@ -108,7 +117,15 @@ export function enqueueFrameImage(
     revision: shot.revision,
     replacement: false,
     references: referenceSnapshot(d, shotId),
-    inputs: { ...inputs, instructions: instructions.trim() },
+    inputs: {
+      ...inputs,
+      instructions: [
+        instructions.trim(),
+        inputs.craft ? craftInstructions(inputs.craft) : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    },
   };
   d.jobs[job.id] = job;
   d.credits -= job.cost;
@@ -126,32 +143,42 @@ export function completeJob(d: Data, id: string) {
     j.state = "canceled";
     return;
   }
-  const aid = uid("asset");
-  const tid = uid("take");
-  d.assets[aid] = {
-    id: aid,
-    projectId: j.projectId,
-    title: `${s.title} · demo ${j.operation} ${j.attempt}`,
-    kind: "image",
-    url: d.scenes[s.sceneId].cover,
-    provenance:
-      "Simulated result: original vector storyboard animatic, no AI or video rendering.",
-  };
-  d.takes[tid] = {
-    id: tid,
-    shotId: s.id,
-    kind: j.operation,
-    revision: j.revision,
-    approved: false,
-    sourceFrames: Math.max(240, j.inputs?.targetFrames ?? s.targetFrames),
-    assetId: aid,
-    createdAt: Date.now(),
-    sourceTakeId: j.sourceTakeId,
-    references: j.references,
-    inputs: j.inputs,
-  };
-  if (j.operation === "image") s.imageTakeId = tid;
-  else s.candidateTakeId = tid;
+  for (let output = 0; output < (j.outputCount ?? 1); output++) {
+    const aid = uid("asset");
+    const tid = uid("take");
+    const sourceAsset =
+      j.operation === "video"
+        ? d.assets[j.inputs?.startingFrameAssetId ?? ""]
+        : d.assets[d.takes[s.imageTakeId ?? ""]?.assetId ?? ""];
+    d.assets[aid] = {
+      id: aid,
+      projectId: j.projectId,
+      title: `${s.title} · demo ${j.operation} ${j.attempt}`,
+      kind: "image",
+      url:
+        sourceAsset?.url && !sourceAsset.missing
+          ? sourceAsset.url
+          : d.scenes[s.sceneId].cover,
+      provenance:
+        "Simulated result using bundled AI-created demo photography; no live generation or video rendering.",
+    };
+    d.takes[tid] = {
+      id: tid,
+      shotId: s.id,
+      kind: j.operation,
+      revision: j.revision,
+      approved: false,
+      sourceFrames: j.inputs?.targetFrames ?? s.targetFrames,
+      assetId: aid,
+      createdAt: Date.now(),
+      sourceTakeId: j.sourceTakeId,
+      references: j.references,
+      inputs: j.inputs,
+    };
+    if (j.operation === "image") {
+      if (!s.imageTakeId) s.imageTakeId = tid;
+    } else s.candidateTakeId = tid;
+  }
   j.state = "succeeded";
   j.progress = 100;
 }
@@ -194,7 +221,16 @@ export function tick(d: Data) {
 export function retryJob(d: Data, id: string) {
   const j = d.jobs[id];
   if (j?.target && ["failed", "canceled"].includes(j.state)) {
-    enqueueStudio(d, j.target.kind, [j.target.id]);
+    const info = targetInfo(d, j.target.kind, j.target.id);
+    const sameSource =
+      info.revision === j.revision &&
+      info.identity === j.sourceIdentityVersionId &&
+      (!("sourceLook" in info) || info.sourceLook === j.sourceLookVersionId);
+    enqueueStudio(d, j.target.kind, [j.target.id], false, {
+      count: j.outputCount,
+      viewType: j.viewType,
+      specification: sameSource ? j.specification : undefined,
+    });
     return;
   }
   if (!j || !["failed", "canceled"].includes(j.state) || isBusy(d, j.shotId))
@@ -219,7 +255,11 @@ export function retryJob(d: Data, id: string) {
     error: undefined,
     revision: s.revision,
     references: referenceSnapshot(d, s.id),
-    inputs: generationInputSnapshot(d, s.id),
+    inputs: generationInputSnapshot(
+      d,
+      s.id,
+      j.operation === "video" ? "video" : "image",
+    ),
     attempt,
   };
   d.jobs[next.id] = next;
@@ -243,6 +283,7 @@ export function approveTake(d: Data, shotId: string, takeId: string) {
   if (!scenePlanApproved(d, s.sceneId))
     throw Error("Approve the current scene plan before accepting this result.");
   t.approved = true;
+  if (t.kind === "image") s.imageTakeId = t.id;
   if (t.kind === "video") {
     s.currentTakeId = t.id;
     if (s.candidateTakeId === t.id) s.candidateTakeId = undefined;
@@ -369,6 +410,8 @@ export function cancelJob(d: Data, id: string) {
 export function deleteEpisode(d: Data, id: string) {
   const ep = d.episodes[id];
   if (!ep) return;
+  for (const look of Object.values(d.studio.looks))
+    if (look.episodeId === id) deleteLook(d, look.id);
   for (const s of shotsOfEpisode(d, id)) {
     for (const j of Object.values(d.jobs))
       if (j.shotId === s.id) delete d.jobs[j.id];

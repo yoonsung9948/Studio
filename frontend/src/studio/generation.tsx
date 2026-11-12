@@ -1,3 +1,6 @@
+import { productionSync } from "../services/production-sync";
+import { generateShotBatch } from "../services/shot-generation";
+import { useCredits } from "../services/server-data";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   Dialog,
@@ -13,6 +16,7 @@ import {
   approveWorkspaceSource,
   lockWorkspace,
 } from "../domain/workspace";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSelection, useStudio } from "./selection";
 export function commit(fn: (d: Data) => void, label: string, undoable = true) {
   const ok = useStore.getState().mutate(fn, undoable);
@@ -25,13 +29,36 @@ const Context = createContext<
 >(() => {});
 export const useGenerate = () => useContext(Context);
 export function GenerationProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [batch, setBatch] = useState<Request | null>(null),
     [confirm, setConfirm] = useState(false);
   const d = useStore((s) => s.data);
+  const credits = useCredits();
   const plan = batch
-    ? workspacePreflight(d, batch.ids, batch.op, batch.proposalId)
+    ? workspacePreflight(
+        { ...d, credits },
+        batch.ids,
+        batch.op,
+        batch.proposalId,
+      )
     : null;
   const submit = (request: Request) => {
+    if (productionSync()) {
+      if (request.op !== "image" && request.op !== "video") {
+        useStore
+          .getState()
+          .setNotice("Use the asset view editor for this generation.");
+        return;
+      }
+      void generateShotBatch(request.ids, request.op)
+        .then(() => {
+          setBatch(null);
+          setConfirm(false);
+        })
+        .catch((e) => useStore.getState().setNotice(e.message));
+      return;
+    }
     if (
       commit(
         (data) =>
@@ -50,7 +77,7 @@ export function GenerationProvider({ children }: { children: ReactNode }) {
     proposalId?: string,
   ) => {
     const plan = workspacePreflight(
-      useStore.getState().data,
+      { ...useStore.getState().data, credits },
       ids,
       op,
       proposalId,
@@ -60,6 +87,30 @@ export function GenerationProvider({ children }: { children: ReactNode }) {
     else setBatch({ ids, op, proposalId });
   };
   const fix = (shotId: string, action: string) => {
+    const data = useStore.getState().data;
+    const shot = data.shots[shotId];
+    const scene = shot && data.scenes[shot.sceneId];
+    const episode = scene && data.episodes[scene.episodeId];
+    const isWorkbench = location.pathname.includes("/shots/");
+    if (
+      isWorkbench &&
+      episode &&
+      !["Unlock", "Approve source", "Show activity", "Account"].includes(action)
+    ) {
+      const episodePath = `/projects/${episode.projectId}/episodes/${episode.id}`;
+      if (action === "Review script") navigate(`${episodePath}?view=script`);
+      else if (action === "Ask Director") {
+        useSelection.getState().replace([`shot:${shotId}`]);
+        useStudio.getState().set({ inspector: true, inspectorTab: "director" });
+        navigate(episodePath);
+      } else if (action === "Review takes") {
+        navigate(`${episodePath}/shots/${shotId}?stage=review`);
+      } else if (action === "Edit cast" || action === "Edit references") {
+        navigate(`/projects/${episode.projectId}/world`);
+      } else navigate(`${episodePath}/shots/${shotId}?stage=scene`);
+      setBatch(null);
+      return;
+    }
     if (action === "Unlock")
       commit((data) => lockWorkspace(data, [shotId], false), "Shot unlocked");
     else if (action === "Approve source")

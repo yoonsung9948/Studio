@@ -1,0 +1,135 @@
+/* Scope controls use explicit image/text tracks; no overlay or select padding offsets. */
+.studio-project-context .studio-scope-field {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.studio-scope-field-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+.studio-sidebar .studio-project-context .studio-scope-trigger {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 15px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+}
+.studio-sidebar .studio-project-context .studio-scope-trigger:hover,
+.studio-sidebar
+  .studio-project-context
+  .studio-scope-trigger[data-state="open"] {
+  border-color: var(--accent);
+  background: var(--raised);
+}
+.studio-sidebar .studio-project-context .studio-scope-trigger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.studio-scope-thumbnail {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  min-width: 34px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--muted);
+}
+.studio-scope-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.studio-sidebar .studio-project-context .studio-scope-thumbnail svg,
+.studio-scope-menu .studio-scope-thumbnail svg {
+  width: 17px;
+  height: 17px;
+}
+.studio-project-navigation .studio-scope-trigger .studio-scope-trigger-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.studio-project-navigation .studio-scope-trigger .studio-scope-thumbnail {
+  display: grid;
+}
+.studio-sidebar .studio-project-context .studio-scope-chevron {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+.studio-scope-menu {
+  z-index: 70;
+  width: max(260px, var(--radix-dropdown-menu-trigger-width));
+  max-width: calc(100vw - 20px);
+  max-height: min(360px, var(--radix-dropdown-menu-content-available-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  font-size: 13px;
+}
+.studio-scope-option {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  min-height: 51px;
+  border-radius: 5px;
+  user-select: none;
+  cursor: var(--st-cursor, pointer);
+}
+.studio-scope-option .studio-scope-thumbnail {
+  width: 40px;
+  height: 34px;
+}
+.studio-scope-option-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.studio-scope-option[data-highlighted],
+.studio-scope-load-more[data-highlighted] {
+  outline: none;
+  background: var(--raised);
+}
+.studio-scope-option[data-state="checked"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+.studio-scope-indicator {
+  width: 16px;
+  color: var(--accent);
+}
+.studio-scope-separator {
+  height: 1px;
+  margin: 5px;
+  background: var(--border);
+}
+.studio-scope-load-more {
+  padding: 11px 10px;
+  border-radius: 5px;
+  cursor: var(--st-cursor, pointer);
+}

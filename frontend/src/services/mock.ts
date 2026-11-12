@@ -1,3 +1,5 @@
+import { productionSync } from "./production-sync";
+import { generationInputs } from "../domain/generation-inputs";
 import { useStore } from "../stores/store";
 import { CONFIG, uid } from "../domain/types";
 import { tick } from "../domain/commands";
@@ -20,6 +22,7 @@ export const generationService: GenerationService = {
     const interval = setInterval(() => {
       const s = useStore.getState();
       if (
+        !productionSync() &&
         !s.paused &&
         Object.values(s.data.jobs).some((j) =>
           ["queued", "waiting", "running"].includes(j.state),
@@ -53,6 +56,10 @@ export const exportService: ExportService = {
   async create(data, id, options) {
     await new Promise((r) => setTimeout(r, 1000));
     const ep = data.episodes[id];
+    const first = shotsOfEpisode(data, id)[0];
+    const aspect = first
+      ? generationInputs(data, first.sceneId, first.id).aspectRatio
+      : "16:9";
     return {
       id: uid("export"),
       episodeId: id,
@@ -68,8 +75,13 @@ export const exportService: ExportService = {
           episode: { id, title: ep.title, targetSeconds: ep.targetSeconds },
           timelineVersion: ep.timelineVersion,
           fps: 30,
-          aspectRatio: "9:16",
-          dimensions: [1080, 1920],
+          aspectRatio: aspect,
+          dimensions:
+            aspect === "16:9"
+              ? [1920, 1080]
+              : aspect === "9:16"
+                ? [1080, 1920]
+                : [1080, 1080],
           options,
           shots: shotsOfEpisode(data, id).map((s) => ({
             id: s.id,

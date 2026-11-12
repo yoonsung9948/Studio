@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"nori/studio/server/internal/accounts"
 	"nori/studio/server/internal/platform/blob"
 )
 
@@ -16,6 +17,8 @@ type FileStore interface {
 
 type fileHandlers struct {
 	store   FileStore
+	assets  AssetService
+	signer  *DownloadSigner
 	respond *responder
 }
 
@@ -30,7 +33,21 @@ func (h fileHandlers) routes(mux *http.ServeMux) {
 // getFile streams a stored file. It supports Range requests (video seeking),
 // HEAD, and If-Modified-Since revalidation.
 func (h fileHandlers) getFile(w http.ResponseWriter, req *http.Request) {
-	obj, err := h.store.Open(req.Context(), req.PathValue("key"))
+	user, ok := accounts.UserFromContext(req.Context())
+	if !ok {
+		writeError(w, 401, "unauthenticated", "Sign in to continue.")
+		return
+	}
+	file, err := requireAssetFile(req.Context(), h.assets, user.ID, req.PathValue("key"))
+	if err != nil {
+		h.respond.error(w, err)
+		return
+	}
+	h.serveFile(w, req, file.StorageKey)
+}
+
+func (h fileHandlers) serveFile(w http.ResponseWriter, req *http.Request, key string) {
+	obj, err := h.store.Open(req.Context(), key)
 	if errors.Is(err, blob.ErrNotFound) || errors.Is(err, blob.ErrInvalidKey) {
 		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
 		return
@@ -47,8 +64,9 @@ func (h fileHandlers) getFile(w http.ResponseWriter, req *http.Request) {
 	header := w.Header()
 	header.Set("Content-Type", info.ContentType)
 	// Files may be replaced under the same key, so clients revalidate before reuse.
-	header.Set("Cache-Control", "private, no-cache")
+	header.Set("Cache-Control", "private, no-store")
 	// Treat any stored file as untrusted: never let it run scripts on this origin.
 	header.Set("Content-Security-Policy", "sandbox")
+	header.Set("Referrer-Policy", "no-referrer")
 	http.ServeContent(w, req, path.Base(info.Key), info.ModTime, obj)
 }

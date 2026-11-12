@@ -23,15 +23,13 @@ const rect = (left: number, top: number, width: number, height: number) => ({
 beforeEach(() => {
   useStore.getState().reset();
   useSelection.getState().replace([]);
-  useStudio
-    .getState()
-    .set({
-      navigation: false,
-      activity: false,
-      settings: false,
-      account: false,
-      palette: false,
-    });
+  useStudio.getState().set({
+    navigation: false,
+    activity: false,
+    settings: false,
+    account: false,
+    palette: false,
+  });
   vi.stubGlobal("PointerEvent", Pointer);
   vi.stubGlobal(
     "requestAnimationFrame",
@@ -41,7 +39,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 it.each([
-  ["/projects", "All work"],
+  ["/work?mode=demo", "All work"],
   ["/projects/browse", "Project cards"],
   ["/projects/midnight/episodes", "Episode cards"],
   ["/projects/midnight/world", "World cards"],
@@ -95,4 +93,55 @@ it("keeps reference dragging on the dedicated World handle", () => {
   fireEvent.pointerMove(document, { clientX: 235, clientY: 140 });
   fireEvent.pointerUp(document);
   expect(useSelection.getState().keys).toEqual([]);
+});
+
+it("selects across the whole Home body without selecting clipped row cards", () => {
+  render(
+    <MemoryRouter initialEntries={["/work?mode=demo"]}>
+      <App />
+    </MemoryRouter>,
+  );
+  const body = screen.getByRole("group", { name: "Home content" });
+  const recent = screen.getByRole("group", { name: "Recent work cards" });
+  const projects = screen.getByRole("group", { name: "Projects cards" });
+  const all = screen.getByRole("group", { name: "All work" });
+  expect(body.querySelectorAll(".st-selection-surface")).toHaveLength(0);
+  vi.spyOn(body, "getBoundingClientRect").mockReturnValue(rect(0, 0, 600, 400));
+  const recentCard = within(recent).getAllByRole("article")[0];
+  const [projectCard, hiddenCard] = within(projects).getAllByRole("article");
+  const allCard = within(all).getAllByRole("article")[1];
+  vi.spyOn(recentCard, "getBoundingClientRect").mockReturnValue(
+    rect(20, 40, 100, 80),
+  );
+  vi.spyOn(projectCard, "getBoundingClientRect").mockReturnValue(
+    rect(20, 160, 100, 80),
+  );
+  vi.spyOn(hiddenCard, "getBoundingClientRect").mockReturnValue(
+    rect(350, 160, 100, 80),
+  );
+  vi.spyOn(allCard, "getBoundingClientRect").mockReturnValue(
+    rect(20, 280, 100, 60),
+  );
+  projects.style.overflowX = "auto";
+  Object.defineProperty(projects, "clientWidth", {
+    configurable: true,
+    value: 300,
+  });
+  vi.spyOn(projects, "getBoundingClientRect").mockReturnValue(
+    rect(0, 160, 300, 80),
+  );
+  fireEvent.pointerDown(body, { button: 0, clientX: 5, clientY: 5 });
+  fireEvent.pointerMove(document, { clientX: 500, clientY: 350 });
+  expect(useSelection.getState().keys).toEqual([
+    recentCard.dataset.selectionKey,
+    projectCard.dataset.selectionKey,
+    allCard.dataset.selectionKey,
+  ]);
+  expect(document.querySelectorAll(".st-selection-marquee")).toHaveLength(1);
+  // The overlay must share the composer's studio stacking context, not cover it from body.
+  expect(document.querySelector(".st-selection-marquee")?.parentElement).toBe(
+    document.querySelector(".studio-shell"),
+  );
+  fireEvent.pointerUp(document);
+  expect(document.querySelector(".st-selection-marquee")).toBeNull();
 });

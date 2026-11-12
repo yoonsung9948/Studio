@@ -1,0 +1,1480 @@
+/* Director's desk: common geometry for Scene, Starting frame, Motion and Review. */
+.dd-workbench {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg);
+}
+.dd-scene-rail {
+  width: clamp(190px, 17vw, 260px);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow: auto;
+  padding: 22px 16px;
+}
+.dd-scene-picker {
+  display: none;
+}
+.dd-rail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.dd-rail-heading h2 {
+  font-size: 15px;
+}
+.dd-scene-nav {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.dd-scene-nav.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.dd-scene-nav > a {
+  display: block;
+}
+.dd-scene-nav > a > img,
+.dd-rail-placeholder {
+  width: 100%;
+  aspect-ratio: 2.05;
+  object-fit: cover;
+}
+.dd-rail-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--raised);
+  color: var(--muted);
+}
+.dd-scene-nav > a > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 9px;
+  font-size: 13px;
+}
+.dd-scene-nav time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dd-scene-nav nav {
+  display: grid;
+  padding: 4px 5px 7px;
+  gap: 3px;
+  border-top: 1px solid var(--border);
+}
+.dd-scene-nav nav a {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  padding: 7px;
+  border-radius: 4px;
+  color: var(--muted);
+}
+.dd-scene-nav nav a[aria-current="page"] {
+  color: var(--accent);
+  background: var(--raised);
+}
+.dd-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  padding: 7px 0;
+  font-size: 12px;
+}
+.dd-work-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dd-stage-header {
+  height: 76px;
+  min-height: 76px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+}
+.dd-stage-header nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+}
+.dd-stage-header nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  padding: 0;
+}
+.dd-stage-header nav button:not(:last-child)::after {
+  content: "";
+  width: clamp(15px, 3.4vw, 68px);
+  height: 1px;
+  background: var(--border);
+  margin-left: 4px;
+}
+.dd-stage-header nav button[aria-current="step"] {
+  color: var(--text);
+}
+.dd-stage-header nav button[aria-current="step"]::after {
+  background: var(--accent);
+}
+.dd-stage-header nav button > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #617282;
+  background: var(--surface);
+  border-radius: 50%;
+}
+.dd-stage-header nav button[aria-current="step"] > span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.dd-stage-header .is-complete {
+  border-color: var(--green);
+  color: var(--green);
+}
+.dd-work-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(285px, 24vw, 370px);
+  flex: 1;
+  min-height: 0;
+}
+.dd-work-main {
+  padding: 24px;
+  overflow: auto;
+  min-width: 0;
+}
+.dd-controls {
+  border-left: 1px solid var(--border);
+  padding: 24px 20px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  background: var(--bg);
+}
+.dd-controls > h2 {
+  font-size: 20px;
+}
+.dd-controls fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: contents;
+}
+.dd-scene-titlebar,
+.dd-shot-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.dd-scene-titlebar .ds-editable-heading {
+  flex: 1;
+  min-width: 110px;
+}
+.dd-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.dd-screenplay {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.dd-screenplay-heading {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  font:
+    600 13px/1.5 ui-monospace,
+    SFMono-Regular,
+    monospace;
+}
+.dd-screenplay-heading span {
+  font: 11px/1.5 inherit;
+  color: var(--muted);
+  font-weight: 400;
+}
+.dd-screenplay-body {
+  display: flex;
+  min-height: 300px;
+}
+.dd-line-numbers {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 15px;
+  min-width: 46px;
+  text-align: right;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+  font:
+    11px/26px ui-monospace,
+    monospace;
+  user-select: none;
+}
+.dd-screenplay textarea {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  resize: vertical;
+  min-height: 300px;
+  padding: 20px;
+  font:
+    13px/26px ui-monospace,
+    SFMono-Regular,
+    monospace;
+  outline-offset: -2px;
+}
+.dd-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dd-section-heading h2 {
+  font-size: 17px;
+}
+.dd-section-heading h2 small {
+  margin-left: 12px;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.dd-shot-plan-heading {
+  margin: 24px 0 14px;
+  flex-wrap: wrap;
+}
+.dd-shot-plan {
+  display: grid;
+  gap: 8px;
+}
+.dd-plan-sortable {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+.dd-plan-sortable .drag-handle {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  padding: 4px;
+  touch-action: none;
+  z-index: 1;
+}
+.dd-plan-row {
+  display: grid;
+  grid-template-columns:
+    24px minmax(95px, 1fr) minmax(80px, 1.05fr) minmax(100px, 1.3fr)
+    minmax(90px, 0.9fr) 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 9px 10px 31px;
+}
+.dd-plan-number {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.dd-plan-name {
+  min-width: 0;
+}
+.dd-plan-name > input {
+  background: transparent;
+  padding: 4px 0;
+  border-color: transparent;
+  width: 100%;
+  font-size: 13px;
+}
+.dd-plan-name label {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dd-plan-name label input {
+  width: 45px;
+  height: 26px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+}
+.dd-plan-thumb {
+  aspect-ratio: 1.65;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--raised);
+  font-size: 11px;
+  color: var(--muted);
+}
+.dd-plan-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dd-plan-action {
+  font-size: 12px;
+  line-height: 1.6;
+  width: 100%;
+  border-color: transparent;
+  background: transparent;
+  padding: 4px;
+  resize: none;
+}
+.dd-plan-angle {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.dd-plan-angle select {
+  font-size: 12px;
+  height: 33px;
+  width: 100%;
+}
+.dd-plan-row .ds-icon {
+  width: 28px;
+}
+.dd-foundation {
+  display: grid;
+  gap: 10px;
+}
+.dd-foundation > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.dd-foundation h3 {
+  font-size: 14px;
+}
+.dd-cast-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.dd-cast-card {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  text-align: left;
+  background: var(--surface);
+}
+.dd-cast-card > img {
+  width: 100%;
+  aspect-ratio: 1.4;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.dd-cast-card > span {
+  display: flex;
+  gap: 8px;
+  padding: 9px;
+  align-items: center;
+  font-size: 13px;
+}
+.dd-cast-card small {
+  display: block;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.dd-approved-check {
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--bg);
+  padding: 3px;
+}
+.dd-foundation-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.dd-foundation-card > img {
+  width: 100%;
+  height: 85px;
+  object-fit: cover;
+}
+.dd-foundation-card label {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+.dd-foundation-card select {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+}
+.dd-style-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.dd-style-choices button {
+  border: 1px solid var(--border);
+  padding: 3px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--surface);
+}
+.dd-style-choices button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.dd-style-preview {
+  height: 37px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+.style-warmer {
+  filter: sepia(0.4) saturate(1.3);
+}
+.style-cooler {
+  filter: hue-rotate(175deg) saturate(0.65);
+}
+.dd-inspector-continue {
+  margin-top: auto;
+}
+.dd-cast-picker {
+  display: grid;
+  gap: 10px;
+  max-height: 50vh;
+  overflow: auto;
+}
+.dd-cast-picker label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dd-cast-picker img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.dd-cast-picker span {
+  flex: 1;
+}
+.dd-cast-picker small {
+  display: block;
+  margin-top: 4px;
+}
+.dd-inspector-heading {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.dd-inspector-heading h2 {
+  font-size: 20px;
+}
+.dd-ai-panel pre,
+.ds-prompt-proposal pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px/1.8 ui-monospace,
+    SFMono-Regular,
+    monospace;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  max-height: 270px;
+  overflow: auto;
+  margin: 10px 0 0;
+}
+.dd-ai-panel .dd-proposal-copy {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.dd-locked-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.dd-locked-facts span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+}
+.dd-ai-disclosure {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dd-ai-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+.dd-ai-actions .ds-text {
+  justify-content: center;
+}
+.dd-proposed-shot {
+  display: flex;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 14px;
+}
+.dd-proposed-shot > span {
+  color: var(--accent);
+}
+.dd-proposed-shot small {
+  display: block;
+  margin: 5px 0;
+}
+.dd-proposed-shot p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.dd-shot-heading p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.dd-shot-heading > div:first-child {
+  min-width: 0;
+}
+.dd-shot-heading select {
+  height: 35px;
+  font-size: 12px;
+  width: 82px;
+}
+.dd-film-canvas {
+  position: relative;
+  overflow: hidden;
+  background: #060b0f;
+  border: 1px solid var(--border);
+  border-radius: 7px 7px 0 0;
+  min-height: 220px;
+}
+.dd-composition-frame {
+  max-height: 65vh;
+  width: 100%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.dd-film-image {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+.dd-composition-guides {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to right,
+      transparent 33.2%,
+      #fff6 33.2%,
+      #fff6 33.4%,
+      transparent 33.4%,
+      transparent 66.5%,
+      #fff6 66.5%,
+      #fff6 66.7%,
+      transparent 66.7%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 33.2%,
+      #fff6 33.2%,
+      #fff6 33.4%,
+      transparent 33.4%,
+      transparent 66.5%,
+      #fff6 66.5%,
+      #fff6 66.7%,
+      transparent 66.7%
+    );
+  pointer-events: none;
+}
+.dd-film-empty {
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 30px;
+  text-align: center;
+  color: var(--muted);
+}
+.dd-film-empty h2 {
+  color: var(--text);
+  font-size: 22px;
+}
+.dd-film-empty p {
+  max-width: 390px;
+  font-size: 13px;
+}
+.dd-generating {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #617282;
+  border-radius: 6px;
+  background: #0c1217e8;
+  color: #f3f5f6;
+  font-size: 13px;
+}
+.dd-generating > span:last-child {
+  margin-left: auto;
+}
+.dd-busy-dot {
+  height: 7px;
+  width: 7px;
+  background: #ffbf3f;
+  border-radius: 50%;
+  animation: ds-pulse 1.4s infinite;
+}
+.dd-frame-metadata {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 7px 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.dd-frame-metadata span + span {
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+.dd-variations-heading {
+  margin: 20px 0 12px;
+}
+.dd-take-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.dd-take-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  background: var(--surface);
+}
+.dd-take-card[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.dd-take-card > img,
+.dd-take-card > video {
+  aspect-ratio: 1.75;
+  width: 100%;
+  object-fit: cover;
+}
+.dd-take-card > span:not(.ds-badge) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+.dd-take-card .ds-badge {
+  margin: 0 8px 8px;
+  font-size: 10px;
+}
+.dd-references {
+  margin-top: 24px;
+}
+.dd-references .dd-section-heading {
+  margin-bottom: 12px;
+}
+.dd-references h3 {
+  font-size: 16px;
+}
+.dd-section-heading > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.dd-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.dd-reference {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.dd-reference > img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.dd-reference > div:last-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  font-size: 12px;
+}
+.dd-reference small {
+  display: block;
+  font-size: 10px;
+  margin-top: 3px;
+}
+.dd-reference-empty {
+  height: 80px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.dd-control-group {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.dd-control-group > h3 {
+  font-size: 17px;
+  margin-bottom: 3px;
+}
+.dd-control-group .dd-section-heading h3 {
+  font-size: 17px;
+}
+.dd-control-group > textarea {
+  width: 100%;
+  min-height: 100px;
+  font:
+    12px/1.7 ui-monospace,
+    monospace;
+}
+.dd-controls .st-field {
+  font-size: 13px;
+  margin: 0;
+  gap: 8px;
+}
+.dd-controls .st-field textarea {
+  min-height: 84px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.dd-controls .st-field input {
+  height: 38px;
+}
+.dd-select-control {
+  display: grid;
+  grid-template-columns: minmax(95px, 1fr) minmax(125px, 1.2fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dd-select-control select,
+.dd-select-control input {
+  width: 100%;
+  font-size: 12px;
+  height: 38px;
+}
+.dd-range-control {
+  display: grid;
+  gap: 16px;
+}
+.dd-range-control > span {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dd-range-control b {
+  color: var(--text);
+  font-weight: 400;
+}
+.dd-range-control input {
+  width: 100%;
+}
+.dd-advanced {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 13px;
+}
+.dd-advanced summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.dd-advanced .st-field {
+  margin-top: 15px;
+}
+.dd-advanced p {
+  margin-top: 12px;
+  font-size: 11px;
+}
+.dd-advanced-inline summary {
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dd-advanced-inline textarea {
+  width: 100%;
+  margin-top: 12px;
+}
+.dd-generation-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.dd-generation-actions .ds-button {
+  min-height: 42px;
+}
+.dd-generation-actions > small {
+  text-align: center;
+  font-size: 10px;
+}
+.dd-cost {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dd-cost b {
+  color: var(--text);
+  font-weight: 500;
+}
+.dd-readiness {
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 5px;
+  color: var(--accent);
+  font-size: 12px;
+}
+.dd-reference-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 16px;
+}
+.dd-reference-chips > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.dd-reference-chips img {
+  height: 29px;
+  width: 40px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.dd-motion-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  color: #f3f5f6;
+  background: linear-gradient(transparent, #000b);
+  font-size: 12px;
+}
+.dd-motion-overlay span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-frame-conditioning {
+  margin-top: 22px;
+}
+.dd-frame-conditioning > h2 {
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.dd-frame-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.dd-frame-pair > div {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 13px;
+  background: var(--surface);
+}
+.dd-frame-pair h3 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.dd-frame-pair > div > button {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  font-size: 12px;
+}
+.dd-frame-pair img {
+  width: 100px;
+  height: 65px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.dd-frame-pair span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green);
+}
+.dd-frame-pair .dd-add-reference {
+  min-height: 65px;
+  padding: 10px;
+}
+.dd-end-frame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-add-reference {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  width: 100%;
+  padding: 18px;
+  color: var(--muted);
+}
+.dd-performance {
+  margin-top: 22px;
+}
+.dd-performance .st-field {
+  font-size: 16px;
+  gap: 10px;
+}
+.dd-performance textarea {
+  min-height: 100px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.dd-shot-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+.dd-shot-footer > div {
+  display: flex;
+  gap: 6px;
+}
+.dd-review-source {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px;
+}
+.dd-review-source > img {
+  width: 95px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.dd-review-source > div {
+  display: grid;
+  gap: 8px;
+  font-size: 16px;
+}
+.dd-take-details {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.dd-take-details > div {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+}
+.dd-take-details dt {
+  width: 100px;
+  color: var(--muted);
+}
+.dd-take-details dd {
+  margin: 0;
+}
+.dd-review-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--surface);
+}
+.dd-review-check input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+}
+.dd-review-check small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.dd-review-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 18px;
+}
+.dd-review-tools small {
+  max-width: 230px;
+  font-size: 10px;
+}
+.dd-compare-dialog {
+  width: min(1100px, 94vw) !important;
+  max-width: 1100px !important;
+}
+.dd-compare-dialog > div:last-child {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.dd-compare-dialog select {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.dd-image-picker > div:last-child {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.dd-image-picker button > img {
+  aspect-ratio: 1.6;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.dd-image-picker button > span {
+  display: block;
+  font-size: 11px;
+  padding: 5px;
+}
+@keyframes ds-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (min-width: 1800px) {
+  .dd-work-main {
+    padding: 28px 32px;
+  }
+}
+@media (max-width: 1400px) {
+  .dd-plan-row {
+    grid-template-columns:
+      20px minmax(80px, 1fr) 90px minmax(90px, 1fr)
+      100px 25px;
+    gap: 8px;
+  }
+  .dd-plan-angle {
+    font-size: 10px;
+  }
+  .dd-scene-titlebar {
+    flex-wrap: wrap;
+  }
+  .dd-stage-header {
+    padding: 0 16px;
+  }
+  .dd-stage-header nav {
+    gap: 10px;
+  }
+  .dd-stage-header nav button:not(:last-child)::after {
+    width: 22px;
+  }
+  .dd-work-main {
+    padding: 20px;
+  }
+}
+@media (max-width: 1150px) {
+  .dd-scene-rail {
+    width: 185px;
+    padding: 18px 12px;
+  }
+  .dd-work-layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .dd-plan-row {
+    grid-template-columns: 20px 1fr 80px 28px;
+  }
+  .dd-plan-action {
+    grid-column: 2/4;
+  }
+  .dd-plan-angle {
+    grid-column: 2/4;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .dd-plan-row > .ds-icon {
+    grid-row: 1;
+    grid-column: 4;
+  }
+  .dd-stage-header nav button {
+    font-size: 12px;
+    gap: 7px;
+  }
+  .dd-stage-header nav button:not(:last-child)::after {
+    width: 10px;
+  }
+  .dd-controls {
+    padding: 20px 16px;
+  }
+  .dd-take-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .dd-shot-heading {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 950px) {
+  .dd-scene-rail {
+    width: 160px;
+    padding: 16px 10px;
+  }
+  .dd-scene-nav time {
+    display: none;
+  }
+  .dd-stage-header {
+    height: 66px;
+    min-height: 66px;
+  }
+  .dd-stage-header nav {
+    gap: 10px;
+  }
+  .dd-stage-header nav button {
+    flex-direction: column;
+    font-size: 10px;
+    gap: 4px;
+  }
+  .dd-stage-header nav button:not(:last-child)::after {
+    display: none;
+  }
+  .dd-stage-header nav button > span {
+    height: 28px;
+    width: 28px;
+  }
+  .dd-work-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+  .dd-work-main {
+    padding: 16px;
+  }
+  .dd-select-control {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .dd-frame-pair {
+    grid-template-columns: 1fr;
+  }
+  .dd-plan-thumb {
+    display: none;
+  }
+  .dd-plan-row {
+    grid-template-columns: 22px 1fr 30px;
+  }
+  .dd-plan-row > .ds-icon {
+    grid-column: 3;
+  }
+  .dd-plan-action,
+  .dd-plan-angle {
+    grid-column: 2/4;
+  }
+  .dd-screenplay-heading span {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .dd-workbench {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+  .dd-scene-rail {
+    width: 100%;
+    padding: 0;
+    border-right: 0;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  .dd-scene-picker {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .dd-rail-content {
+    display: none;
+  }
+  .dd-scene-rail.is-mobile-open .dd-rail-content {
+    display: block;
+    padding: 16px;
+    max-height: 60vh;
+    overflow: auto;
+  }
+  .dd-scene-nav > a > img {
+    max-height: 130px;
+  }
+  .dd-scene-nav time {
+    display: block;
+  }
+  .dd-work-body {
+    overflow: visible;
+    min-height: auto;
+    flex: none;
+  }
+  .dd-work-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+  }
+  .dd-work-main {
+    overflow: visible;
+  }
+  .dd-controls {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    overflow: visible;
+    padding: 20px 16px;
+    gap: 22px;
+  }
+  .dd-stage-header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 3;
+  }
+  .dd-stage-header nav {
+    justify-content: space-around;
+  }
+  .dd-stage-header nav button {
+    flex-direction: row;
+    font-size: 10px;
+  }
+  .dd-stage-header nav button > span {
+    width: 25px;
+    height: 25px;
+  }
+  .dd-scene-titlebar > .dd-inline {
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .dd-scene-titlebar .ds-button {
+    font-size: 11px;
+    padding: 0 9px;
+  }
+  .dd-plan-row {
+    grid-template-columns: 22px minmax(80px, 1fr) 85px 28px;
+  }
+  .dd-plan-thumb {
+    display: grid;
+  }
+  .dd-plan-row > .ds-icon {
+    grid-column: 4;
+  }
+  .dd-plan-action,
+  .dd-plan-angle {
+    grid-column: 2/4;
+  }
+  .dd-section-heading h2 small {
+    display: block;
+    margin: 4px 0 0;
+  }
+  .dd-section-heading .ds-button {
+    font-size: 11px;
+    padding: 0 9px;
+  }
+  .dd-film-empty {
+    min-height: 250px;
+    padding: 20px;
+  }
+  .dd-frame-metadata {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dd-frame-metadata span + span {
+    padding-left: 8px;
+  }
+  .dd-select-control {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dd-take-strip {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .dd-take-card > span:not(.ds-badge) {
+    font-size: 10px;
+    padding: 6px;
+  }
+  .dd-frame-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dd-frame-pair img {
+    width: 70px;
+  }
+  .dd-compare-dialog > div:last-child {
+    grid-template-columns: 1fr;
+  }
+  .dd-shot-footer {
+    margin-bottom: 5px;
+  }
+  .dd-reference-grid {
+    gap: 6px;
+  }
+  .dd-reference-grid small {
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd-busy-dot {
+    animation: none;
+  }
+}
+/* The stepper belongs to the canvas; the inspector starts beneath the app header. */
+.dd-work-body {
+  position: relative;
+}
+.dd-stage-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: calc(100% - clamp(285px, 24vw, 370px));
+  background: var(--bg);
+}
+.dd-work-main {
+  padding-top: 100px;
+}
+.dd-screenplay-body {
+  min-height: 276px;
+}
+.dd-screenplay textarea {
+  min-height: 276px;
+  line-height: 24px;
+  padding: 18px;
+}
+.dd-line-numbers {
+  line-height: 24px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.dd-shot-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dd-shot-subtitle > input {
+  min-width: 80px;
+  width: 210px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (max-width: 1150px) {
+  .dd-stage-header {
+    width: calc(100% - 280px);
+  }
+  .dd-work-main {
+    padding-top: 96px;
+  }
+}
+@media (max-width: 950px) {
+  .dd-stage-header {
+    width: calc(100% - 260px);
+  }
+  .dd-work-main {
+    padding-top: 82px;
+  }
+}
+@media (max-width: 767px) {
+  .dd-stage-header {
+    position: sticky;
+    width: 100%;
+  }
+  .dd-work-main {
+    padding-top: 16px;
+  }
+}

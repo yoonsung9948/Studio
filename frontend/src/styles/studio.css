@@ -38,23 +38,23 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   font: inherit;
 }
 .studio-shell button {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .studio-shell h1 {
-  font-size: 18px;
-  letter-spacing: -0.4px;
+  font-size: 28px;
+  letter-spacing: -0.8px;
   margin: 0;
-  font-weight: 500;
+  font-weight: 650;
 }
 .studio-shell h2 {
-  font-size: 14px;
+  font-size: 18px;
   letter-spacing: 0;
   margin: 0;
   font-weight: 500;
 }
 .studio-shell h3 {
-  font-size: 12px;
-  margin: 16px 0 10px;
+  font-size: 14px;
+  margin: 0;
   font-weight: 500;
 }
 .studio-shell h3 small {
@@ -227,7 +227,7 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   min-height: 28px;
   font-size: 11px;
   text-align: center;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   text-decoration: none;
 }
 .st-button:hover {
@@ -272,7 +272,7 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   color: var(--accent);
   padding: 3px 0;
   font-size: 11px;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   text-align: left;
 }
 .st-inline {
@@ -793,7 +793,7 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
 .st-inspector-section > summary {
   font-size: 11px;
   font-weight: 500;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   margin-bottom: 14px;
 }
 .st-field {
@@ -1667,7 +1667,7 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
-  cursor: default;
+  cursor: var(--st-cursor, default);
 }
 .st-episode-tile.is-selected {
   border-color: var(--accent);
@@ -2838,9 +2838,10 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   width: 100%;
   height: 66px;
   min-height: 66px;
-  max-height: 200px;
+  max-height: 66px;
   resize: none;
-  field-sizing: content;
+  field-sizing: fixed;
+  overflow-y: auto;
   background: none;
   border: 0;
   outline: none;
@@ -2848,9 +2849,6 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
   padding: 3px 3px 10px;
   font-size: 13px;
   line-height: 1.6;
-}
-.st-home-composer.has-content > textarea {
-  min-height: 95px;
 }
 .st-composer-controls {
   display: flex;
@@ -3152,7 +3150,7 @@ body.studio-active [contenteditable]:not([contenteditable="false"]) * {
 article.st-home-project {
   display: block;
   height: 100%;
-  cursor: default;
+  cursor: var(--st-cursor, default);
 }
 article.st-home-project.is-selected {
   border-color: var(--accent);
@@ -3316,7 +3314,7 @@ article.st-home-project.is-selected {
   border-radius: 7px;
   background: var(--surface);
   overflow: hidden;
-  cursor: default;
+  cursor: var(--st-cursor, default);
   min-width: 0;
 }
 .st-world-card:hover {
@@ -3597,10 +3595,11 @@ article.st-home-project.is-selected {
 .st-mini-selection {
   min-height: 100%;
 }
+/* Keep drag selection inside the studio layer, below the floating composer (4). */
 .st-selection-marquee {
   position: fixed;
   pointer-events: none;
-  z-index: 1000;
+  z-index: 3;
   border: 1px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-radius: 2px;
@@ -3637,4 +3636,350 @@ article.st-home-project.is-selected {
 }
 .st-world-reference-handle:active {
   cursor: grabbing;
+}
+
+/* Replies sit above the existing floating composer without replacing Home. */
+.st-home-chat-reply {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px #0001;
+  overflow: hidden;
+}
+.st-home-chat-reply > header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.st-home-chat-reply > header b {
+  font-weight: 500;
+}
+.st-home-chat-reply [role="status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+.st-home-chat-reply-body {
+  max-height: min(330px, 38dvh);
+  padding: 12px 16px;
+}
+.st-home-chat-reply p,
+.st-home-chat-reply li,
+.st-home-chat-reply dd {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.st-home-chat-reply p {
+  margin: 0 0 10px;
+}
+.st-home-chat-reply h3 {
+  font-weight: 500;
+  margin: 12px 0 6px;
+}
+.st-home-chat-reply h3:first-child {
+  margin-top: 0;
+}
+.st-home-chat-reply dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+}
+.st-home-chat-reply dd {
+  min-width: 0;
+  margin: 0;
+}
+.st-home-chat-reply dt,
+.st-home-chat-prompt,
+.st-home-chat-reply small {
+  color: var(--muted);
+}
+.st-home-chat-reply ul {
+  padding-left: 18px;
+}
+.st-home-chat-error {
+  color: var(--danger);
+  margin: 0;
+}
+.st-home-reopen {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+.st-home-chat-spinner {
+  animation: st-home-chat-spin 1.2s linear infinite;
+}
+@keyframes st-home-chat-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-home-chat-spinner {
+    animation: none;
+  }
+}
+
+/* Keep the reply inside Home when the running-jobs tray reduces its height. */
+.st-composer-dock {
+  max-height: calc(100% - 85px);
+}
+.st-home-chat-reply {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 1;
+}
+.st-home-chat-reply > header {
+  flex-shrink: 0;
+}
+.st-home-chat-reply-body {
+  min-height: 0;
+}
+.st-composer-dock > .st-home-composer,
+.st-composer-dock > .st-composer-examples,
+.st-composer-dock > .st-composer-note,
+.st-composer-dock > .st-home-reopen {
+  flex-shrink: 0;
+}
+
+.st-home-composer .st-composer-controls .st-composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  margin-left: auto;
+}
+
+.st-home-card-section {
+  min-width: 0;
+}
+.st-home-card-section .st-section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.st-home-card-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+}
+.st-home-row-cards {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 1px 10px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.st-home-row-cards::-webkit-scrollbar {
+  display: none;
+}
+.st-home-row-cards > .st-home-work-card,
+.st-home-row-cards > .st-context-target {
+  flex: 0 0 228px;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.st-home-row-cards .st-home-project {
+  width: 100%;
+}
+.st-home-row-cards .st-home-project > div {
+  aspect-ratio: 16/10;
+}
+.st-home-row-arrow {
+  width: 28px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.st-home-row-arrow:disabled {
+  opacity: 0.35;
+  cursor: var(--st-cursor, default);
+}
+.st-home-row-empty {
+  padding: 8px 0;
+}
+@media (max-width: 600px) {
+  .st-home-card-row {
+    grid-template-columns: 24px minmax(0, 1fr) 24px;
+    gap: 6px;
+  }
+  .st-home-row-arrow {
+    width: 24px;
+  }
+  .st-home-row-cards > .st-home-work-card,
+  .st-home-row-cards > .st-context-target {
+    flex-basis: min(228px, 100%);
+  }
+}
+.st-home-canvas > [aria-label="All work"] {
+  max-width: 1450px;
+  margin: 0 auto 32px;
+}
+
+.st-topbar-back {
+  margin-right: auto;
+}
+
+/* Character sheets keep identity and look browsing on separate work surfaces. */
+.st-world-sheet-layout.st-character-sheet-layout {
+  grid-template-columns: 300px minmax(0, 1fr) 265px;
+}
+.st-character-sheet-layout > .st-world-detail {
+  border-right: 1px solid var(--border);
+  padding: 20px;
+}
+.st-character-looks {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.st-character-looks > header {
+  padding: 18px 22px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.st-character-looks h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.st-look-cards-scroll {
+  padding: 0 22px 24px;
+}
+.st-look-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.st-look-card-grid > .st-context-target {
+  min-width: 0;
+}
+.st-look-card .st-look-portrait {
+  aspect-ratio: 3 / 4;
+}
+.st-look-card .st-look-portrait img {
+  object-position: center top;
+}
+.st-look-card .st-field {
+  margin: 0;
+}
+.st-look-card .st-field input {
+  font-weight: 500;
+}
+.st-look-generation {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+@media (max-width: 1100px) {
+  .st-world-sheet-layout.st-character-sheet-layout {
+    grid-template-columns: 270px minmax(0, 1fr) 235px;
+  }
+}
+@media (max-width: 850px) {
+  .st-world-sheet-layout.st-character-sheet-layout {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .st-world-sheet-layout.st-character-sheet-layout {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .st-character-sheet-layout > .st-world-detail {
+    flex: none;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .st-character-sheet-layout .st-character-looks {
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  .st-character-sheet-layout .st-look-cards-scroll {
+    overflow: visible;
+  }
+}
+
+.st-look-portrait img.st-look-legacy-portrait {
+  transform: scale(2.5);
+  transform-origin: center 34%;
+}
+
+.st-owned-section {
+  padding: 18px 0;
+}
+.st-owned-create,
+.st-owned-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.st-owned-library {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 20px;
+  padding: 20px;
+}
+.st-owned-library:not(:has(aside)) {
+  grid-template-columns: 1fr;
+}
+.st-owned-media img,
+.st-owned-media video {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+.st-owned-media audio {
+  width: 100%;
+}
+.st-owned-job {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.st-owned-job > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 700px) {
+  .st-owned-library {
+    grid-template-columns: 1fr;
+  }
+  .st-owned-library .st-world-inspector {
+    display: block;
+  }
+}
+
+.st-home-work-grid > .st-context-target > .st-home-work-card {
+  height: 100%;
+}
+.st-menu-delete {
+  color: #c44747;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.st-context-target.st-selection-context {
+  display: contents;
 }

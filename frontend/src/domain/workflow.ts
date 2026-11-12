@@ -52,6 +52,7 @@ function planSnapshot(d: Data, id: string) {
     scriptRevision: ep.scriptRevision ?? 1,
     title: s.title,
     description: s.description,
+    screenplay: s.screenplay,
     dialogue: s.dialogue ?? "",
     settingDescription: s.settingDescription ?? "",
     creativeNotes: s.creativeNotes ?? "",
@@ -100,6 +101,7 @@ export function updateScenePlan(
     Pick<
       Scene,
       | "title"
+      | "screenplay"
       | "description"
       | "dialogue"
       | "settingDescription"
@@ -110,8 +112,11 @@ export function updateScenePlan(
 ) {
   const s = d.scenes[id];
   if (!s) throw Error("Scene no longer exists.");
-  if (fields.title !== undefined && !fields.title.trim())
-    throw Error("Name this scene.");
+  if (
+    fields.title !== undefined &&
+    (!fields.title.trim() || fields.title.trim().length > 120)
+  )
+    throw Error("Name this scene using 1–120 characters.");
   if (Object.values(fields).some((v) => v && v.length > 10000))
     throw Error("Keep each field under 10,000 characters.");
   const setup = ensureSetup(d, id);
@@ -125,7 +130,20 @@ export function updateScenePlan(
     (seconds === undefined || Math.abs(seconds - setup.targetSeconds) < 1 / 30)
   )
     return;
-  Object.assign(s, fields);
+  const affectsGeneration =
+    seconds !== undefined ||
+    Object.entries(fields).some(
+      ([key, value]) => key !== "title" && s[key as keyof Scene] !== value,
+    );
+  Object.assign(
+    s,
+    fields,
+    fields.title !== undefined ? { title: fields.title.trim() } : {},
+  );
+  if (!affectsGeneration) {
+    bumpStudio(d, d.episodes[s.episodeId].projectId);
+    return;
+  }
   s.planRevision = (s.planRevision ?? 1) + 1;
   setup.revision++;
   if (seconds !== undefined) {
@@ -141,8 +159,14 @@ export function updateScenePlan(
         (i < total % s.shotIds.length ? 1 : 0);
     });
   }
-  if (fields.description !== undefined && setup.generation)
+  if (
+    fields.description !== undefined &&
+    setup.generation &&
+    s.screenplay === undefined
+  )
     setup.generation.instructions = fields.description;
+  if (fields.screenplay !== undefined && setup.generation)
+    setup.generation.instructions = fields.screenplay;
   if (fields.dialogue !== undefined && s.shotIds.length)
     d.shots[s.shotIds.at(-1)!].dialogue = fields.dialogue;
   markShotsStale(d, s.shotIds);

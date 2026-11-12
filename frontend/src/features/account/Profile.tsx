@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useOwnedData, useCredits } from "../../services/server-data";
+import { ServerRechargeDialog } from "../billing/Recharge";
 import { Link } from "react-router-dom";
 import {
   ChevronUp,
@@ -32,7 +34,18 @@ function Avatar({ large = false }: { large?: boolean }) {
   );
 }
 
-export function RechargeDialog({
+export function RechargeDialog(props: {
+  open: boolean;
+  onOpenChange(open: boolean): void;
+}) {
+  return useOwnedData() ? (
+    <ServerRechargeDialog {...props} />
+  ) : (
+    <DemoRechargeDialog {...props} />
+  );
+}
+
+function DemoRechargeDialog({
   open,
   onOpenChange,
 }: {
@@ -40,7 +53,7 @@ export function RechargeDialog({
   onOpenChange(open: boolean): void;
 }) {
   const [amount, setAmount] = useState(1000);
-  const credits = useStore((s) => s.data.credits);
+  const credits = useCredits();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="recharge-dialog">
@@ -93,8 +106,9 @@ export function RechargeDialog({
 }
 
 export function ProfileMenu() {
+  const connected = !!useOwnedData();
   const profile = useAccount((s) => s.profile);
-  const credits = useStore((s) => s.data.credits);
+  const credits = useCredits();
   const [recharge, setRecharge] = useState(false);
   return (
     <>
@@ -134,12 +148,13 @@ export function ProfileMenu() {
             <strong>
               <Sparkles size={18} />
               {credits.toLocaleString()}
-              <small>demo cr</small>
+              <small>{connected ? "cr" : "demo cr"}</small>
             </strong>
           </div>
           <DropdownMenuItem onSelect={() => setRecharge(true)}>
             <CreditCard size={15} />
-            Recharge credits<span className="profile-demo-pill">DEMO</span>
+            Recharge credits
+            {!connected && <span className="profile-demo-pill">DEMO</span>}
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/profile/settings">
@@ -160,8 +175,9 @@ export function ProfileMenu() {
 }
 
 export function ProfileSettings() {
+  const connected = !!useOwnedData();
   const profile = useAccount((s) => s.profile);
-  const credits = useStore((s) => s.data.credits);
+  const credits = useCredits();
   const [recharge, setRecharge] = useState(false);
   const [saved, setSaved] = useState(false);
   return (
@@ -233,7 +249,7 @@ export function ProfileSettings() {
             <strong>
               <Sparkles size={20} />
               {credits.toLocaleString()}
-              <small>demo cr</small>
+              <small>{connected ? "cr" : "demo cr"}</small>
             </strong>
           </div>
           <Button onClick={() => setRecharge(true)}>
@@ -241,7 +257,9 @@ export function ProfileSettings() {
             Recharge credits
           </Button>
           <small className="profile-plan-note">
-            Demo membership · No active billing
+            {connected
+              ? "Prepaid generation credits"
+              : "Demo membership · No active billing"}
           </small>
         </section>
       </div>

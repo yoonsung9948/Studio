@@ -457,6 +457,12 @@ export function updateShotPlan(
       )
         throw Error("Choose unique characters from this project.");
       seen.add(a.characterId);
+      if (
+        a.lookId &&
+        d.studio.looks[a.lookId]?.episodeId &&
+        d.studio.looks[a.lookId].episodeId !== d.scenes[s.sceneId].episodeId
+      )
+        throw Error("Choose a look from this episode.");
       if (a.lookId && d.studio.looks[a.lookId]?.characterId !== a.characterId)
         throw Error("Choose a Look owned by this character.");
     }

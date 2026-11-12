@@ -1,21 +1,22 @@
 @import "tailwindcss";
+@import "@clerk/ui/themes/shadcn.css";
 :root {
   color-scheme: dark;
-  --bg: #151515;
-  --sidebar: #191919;
-  --surface: #1d1d1d;
-  --raised: #252525;
-  --hover: #2d2d2d;
-  --border: #343434;
-  --text: #f2f2f2;
-  --muted: #a8a8a8;
-  --subtle: #777b78;
-  --accent: #a3c6b8;
-  --accent-text: #162b24;
-  --green: #a5c5b1;
-  --amber: #d8b77c;
+  --bg: #0d1419;
+  --sidebar: #0c1217;
+  --surface: #131b21;
+  --raised: #1c252d;
+  --hover: #25313a;
+  --border: #303b45;
+  --text: #f3f5f6;
+  --muted: #a9bac8;
+  --subtle: #879aa9;
+  --accent: #ffbf3f;
+  --accent-text: #201807;
+  --green: #89d7a5;
+  --amber: #ffbf3f;
   --blue: #9db9cf;
-  --danger: #e4a39f;
+  --danger: #f28a87;
   --shadow: 0 18px 80px #0007;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
@@ -70,7 +71,7 @@ a {
     border-color 150ms;
 }
 button {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   color: inherit;
 }
 button:disabled {
@@ -1419,7 +1420,7 @@ kbd {
   font-size: 10px;
 }
 .previous > summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .director-bottom {
   padding: 0 15px 13px;
@@ -2123,7 +2124,7 @@ kbd {
   padding: 8px 9px;
   border-radius: 4px;
   font-size: 11px;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   outline: none;
 }
 .dropdown-item[data-highlighted] {
@@ -2131,7 +2132,7 @@ kbd {
 }
 .dropdown-item[data-disabled] {
   opacity: 0.4;
-  cursor: default;
+  cursor: var(--st-cursor, default);
 }
 .tooltip {
   z-index: 90;
@@ -3338,7 +3339,7 @@ kbd {
   position: absolute;
   right: 10px;
   top: 10px;
-  background: #151515b0;
+  background: #0d1419b0;
   color: white;
 }
 .candidate-actions {
@@ -3374,7 +3375,7 @@ kbd {
 }
 .version-history summary,
 .affected-scenes summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   padding: 10px 0;
 }
 .history-row {
@@ -3519,7 +3520,7 @@ kbd {
   align-items: center;
   gap: 14px;
   padding: 16px;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   font-size: 12px;
 }
 .shot-plan-row summary > div {
@@ -4161,7 +4162,7 @@ kbd {
   font-size: 11px;
 }
 .generation-advanced > summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   list-style-position: inside;
 }
 .generation-direction {
@@ -4538,7 +4539,7 @@ kbd {
   margin-top: 18px;
 }
 .generation-suggestions summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .generation-suggestions p {
   font-size: 10px;
@@ -4662,7 +4663,7 @@ kbd {
   gap: 10px;
   padding: 13px;
   font-size: 11px;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .generation-shot-row summary > b {
   flex: 1;
@@ -5094,7 +5095,7 @@ kbd {
   font-size: 11px;
 }
 .workflow-history summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   padding: 10px 0;
 }
 .workflow-history > details {
@@ -5480,7 +5481,7 @@ kbd {
 }
 .scene-shot-breakdown > summary {
   padding: 18px 0;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .scene-shot-breakdown > summary > span {
   color: var(--muted);
@@ -6044,7 +6045,7 @@ kbd {
   color: var(--muted);
 }
 .scene-atmosphere summary {
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .scene-atmosphere input {
   background: var(--surface);
@@ -6158,7 +6159,7 @@ body {
 }
 .login-brand > span > span,
 .login-story-copy h1 > span {
-  color: #a3c6b8;
+  color: #ffbf3f;
 }
 .login-story-copy {
   margin-top: clamp(44px, 8vh, 100px);
@@ -6325,7 +6326,7 @@ body {
   color: var(--muted);
   border: 0;
   background: none;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   border-radius: 5px;
 }
 .login-password button:focus-visible {
@@ -6372,7 +6373,7 @@ body {
   padding: 12px 3px;
   text-align: left;
   color: var(--text);
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   border-radius: 0;
 }
 .profile-strip:hover,
@@ -6614,7 +6615,7 @@ body {
   padding: 18px 8px;
   background: var(--surface);
   color: var(--text);
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
 }
 .recharge-packs button[aria-pressed="true"] {
   border-color: var(--accent);
@@ -7023,7 +7024,7 @@ body {
   border: 1px solid #ffffff17;
   border-radius: 3px;
   color: #acb7ae;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   overflow: hidden;
 }
 .product-scene-picker button[aria-pressed="true"] {
@@ -7248,7 +7249,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  cursor: pointer;
+  cursor: var(--st-cursor, pointer);
   font-size: 14px;
   list-style: none;
 }
@@ -7931,4 +7932,47 @@ body {
   .frame-pair {
     grid-template-columns: 1fr;
   }
+}
+
+/* Native artwork stays aligned with the pointer, without a trailing DOM overlay. */
+@media (any-hover: hover) and (any-pointer: fine) {
+  :root {
+    --st-cursor: url("../assets/cursors/dotori-idle.svg") 6 4, default;
+    cursor: var(--st-cursor);
+  }
+  :root:has(body.st-cursor-pressed) {
+    --st-cursor: url("../assets/cursors/dotori-pressed.svg") 6 4, default;
+  }
+  body
+    :is(
+      input:not([type]),
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="search"],
+      input[type="url"],
+      input[type="number"],
+      textarea,
+      [contenteditable="true"]
+    ) {
+    cursor: text;
+  }
+}
+
+.auth-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--muted);
+}
+.st-account-avatar {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.st-account-summary > .st-account-avatar {
+  width: 30px;
+  height: 30px;
 }

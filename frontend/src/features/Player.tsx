@@ -1,3 +1,4 @@
+import { generationInputs } from "../domain/generation-inputs";
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
@@ -17,12 +18,14 @@ export function Player({
   onSelect,
   onTime,
   studio = false,
+  previewTakeId,
 }: {
   shotIds: string[];
   selectedId?: string;
   onSelect?: (id: string) => void;
   onTime?: (frame: number) => void;
   studio?: boolean;
+  previewTakeId?: string;
 }) {
   const d = useStore((s) => s.data);
   const [index, setIndex] = useState(0);
@@ -39,13 +42,22 @@ export function Player({
     selectedIndex >= 0 ? selectedIndex : Math.min(index, shots.length - 1);
   const shot = shots[i];
   const takeId =
+    (previewTakeId && d.takes[previewTakeId]?.shotId === shot?.id
+      ? previewTakeId
+      : undefined) ??
     shot?.currentTakeId ??
     (studio ? (shot?.candidateTakeId ?? shot?.imageTakeId) : undefined);
   const take = takeId ? d.takes[takeId] : undefined;
   const asset = take ? d.assets[take.assetId] : undefined;
-  const source = asset?.url || (shot ? d.scenes[shot.sceneId].cover : "");
+  const available = !!asset?.url && !asset.missing && !asset.archived;
+  const source =
+    (available ? asset?.url : undefined) ||
+    (shot ? d.scenes[shot.sceneId].cover : "");
   const frames = shot ? shot.outFrame - shot.inFrame : 150;
-  const isVideo = asset?.kind === "video" && !asset.missing;
+  const aspectRatio = shot
+    ? generationInputs(d, shot.sceneId, shot.id).aspectRatio
+    : "16:9";
+  const isVideo = asset?.kind === "video" && available;
   const select = (n: number) => {
     setIndex(n);
     setFrame(0);
@@ -79,6 +91,9 @@ export function Player({
       });
     else video.current.pause();
   }, [playing, isVideo, shot?.id]);
+  useEffect(() => {
+    if (video.current) video.current.volume = shot?.volume ?? 1;
+  }, [shot?.volume, shot?.id]);
   if (!shot)
     return (
       <div className="empty">
@@ -106,12 +121,17 @@ export function Player({
         <div className="preview-label">
           <span className="live-dot" />{" "}
           {studio
-            ? `${take?.kind === "video" ? "Video" : take ? "Still" : "Draft"} · Demo`
+            ? available
+              ? `${take?.kind === "video" ? "Video" : take ? "Still" : "Draft"} · Demo`
+              : "Preview · media unavailable"
             : isVideo
               ? "Fixture video"
               : "Still-image animatic"}
         </div>
-        <div className="film-frame">
+        <div
+          className="film-frame"
+          style={{ aspectRatio: aspectRatio.replace(":", " / ") }}
+        >
           {isVideo ? (
             <video
               ref={video}
@@ -141,18 +161,23 @@ export function Player({
           ) : (
             <img
               src={source}
-              alt={`${d.scenes[shot.sceneId].title} storyboard placeholder`}
+              alt={`${d.scenes[shot.sceneId].title} take preview`}
             />
           )}
           <div className="frame-caption">
-            <span>
-              {take ? "STORYBOARD TAKE" : "MISSING FOOTAGE · PLACEHOLDER"}
-            </span>
+            <span>{take ? "DEMO TAKE" : "MISSING FOOTAGE · PLACEHOLDER"}</span>
             <p>{shot.dialogue || shot.title}</p>
           </div>
         </div>
         <div className="preview-corner">
-          9:16 <span>1080 × 1920</span>
+          {aspectRatio}{" "}
+          <span>
+            {aspectRatio === "16:9"
+              ? "1920 × 1080"
+              : aspectRatio === "9:16"
+                ? "1080 × 1920"
+                : "1080 × 1080"}
+          </span>
         </div>
       </div>
       {mediaError && (

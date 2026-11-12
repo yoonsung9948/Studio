@@ -1,3 +1,5 @@
+import { WorldIdentityPreview } from "./WorldIdentityPreview";
+import { CharacterLooks } from "./CharacterLooks";
 import { SelectionSurface } from "./SelectionSurface";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -38,19 +40,11 @@ import {
   type WorldElementKind,
 } from "../domain/workspace";
 import {
-  createLook,
-  updateLook,
-  addLookAngle,
   enqueueStudio,
   studioCost,
   approveVersion,
 } from "../domain/studio-commands";
-import {
-  targetBusy,
-  characterLooks,
-  characterReferences,
-  referenceLabels,
-} from "../domain/studio-selectors";
+import { targetBusy } from "../domain/studio-selectors";
 import type { StudioOperation } from "../domain/types";
 
 function WorldMedia({
@@ -323,28 +317,41 @@ export function WorldWorkspace() {
       <div className="st-panel-scroll">
         {selected ? (
           <>
-            {!sheet && (
-              <section className="st-world-card-summary">
-                {preview && !preview.missing && (
-                  <img
-                    className="st-world-image"
-                    src={preview.url}
-                    alt={`${selected.name} preview`}
-                  />
-                )}
-                <h2>{selected.name}</h2>
-                <p>{selected.description}</p>
-                <small>{d.projects[projectId].title}</small>
-                <CommandButton id="world.open">
-                  Open sheet <ArrowUpRight size={12} />
-                </CommandButton>
-              </section>
+            {!sheet && kind === "character" ? (
+              <WorldIdentityPreview
+                key={id}
+                characterId={id}
+                projectId={projectId}
+                onEdit={() => {
+                  if (selected) open(selected);
+                }}
+              />
+            ) : (
+              !sheet && (
+                <section className="st-world-card-summary">
+                  {preview && !preview.missing && (
+                    <img
+                      className="st-world-image"
+                      src={preview.url}
+                      alt={`${selected.name} preview`}
+                    />
+                  )}
+                  <h2>{selected.name}</h2>
+                  <p>{selected.description}</p>
+                  <small>{d.projects[projectId].title}</small>
+                  <CommandButton id="world.open">
+                    Open sheet <ArrowUpRight size={12} />
+                  </CommandButton>
+                </section>
+              )
             )}
-            <RegisteredInspectorSections
-              type={kind}
-              id={id}
-              projectId={projectId}
-            />
+            {(sheet || kind !== "character") && (
+              <RegisteredInspectorSections
+                type={kind}
+                id={id}
+                projectId={projectId}
+              />
+            )}
           </>
         ) : (
           <section>
@@ -378,7 +385,7 @@ export function WorldWorkspace() {
       <header className="st-world-browser-header">
         <div>
           <span>{d.projects[projectId].title}</span>
-          <h1>World</h1>
+          <h1>Cast &amp; world</h1>
         </div>
         <div>
           <button
@@ -425,7 +432,9 @@ export function WorldWorkspace() {
         )}
       </div>
       {sheet ? (
-        <div className="st-world-sheet-layout">
+        <div
+          className={`st-world-sheet-layout ${c ? "st-character-sheet-layout" : ""}`}
+        >
           <div className="st-world-detail st-panel-scroll">
             <button
               className="st-text-button st-world-back"
@@ -473,87 +482,12 @@ export function WorldWorkspace() {
                   />
                 </section>
                 {c && (
-                  <>
-                    <WorldMedia
-                      kind="identity"
-                      id={id}
-                      current={c.canonicalVersionId}
-                      title="Identity"
-                    />
-                    <section className="st-world-looks">
-                      <div className="st-section-heading">
-                        <h2>Looks</h2>
-                        <button
-                          className="st-text-button"
-                          onClick={() =>
-                            commit((data) => {
-                              createLook(data, id);
-                            }, "Look added")
-                          }
-                        >
-                          + Add Look
-                        </button>
-                      </div>
-                      {characterLooks(d, id).map((look) => (
-                        <div className="st-world-look" key={look.id}>
-                          <div>
-                            <Field
-                              label={`Look name ${look.name}`}
-                              value={look.name}
-                              onSave={(name) =>
-                                commit(
-                                  (data) => updateLook(data, look.id, { name }),
-                                  "Look renamed",
-                                )
-                              }
-                            />
-                            <Field
-                              label={`Clothing for ${look.name}`}
-                              value={look.description}
-                              multiline
-                              onSave={(description) =>
-                                commit(
-                                  (data) =>
-                                    updateLook(data, look.id, { description }),
-                                  "Look updated",
-                                )
-                              }
-                            />
-                            <button
-                              className="st-text-button"
-                              onClick={() =>
-                                commit((data) => {
-                                  addLookAngle(data, look.id);
-                                }, "Angle added")
-                              }
-                            >
-                              + Add angle
-                            </button>
-                          </div>
-                          <WorldMedia
-                            kind="look"
-                            id={look.id}
-                            current={look.primaryVersionId}
-                            title={look.name}
-                          />
-                        </div>
-                      ))}
-                    </section>
-                    <section>
-                      <h2>Angles</h2>
-                      <div className="st-world-angles">
-                        {characterReferences(d, id).map((ref) => (
-                          <WorldMedia
-                            key={ref.id}
-                            kind="reference"
-                            id={ref.id}
-                            current={ref.activeVersionId}
-                            title={`${referenceLabels[ref.type]}${ref.lookId ? ` · ${d.studio.looks[ref.lookId]?.name}` : ""}`}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  </>
+                  <WorldMedia
+                    kind="identity"
+                    id={id}
+                    current={c.canonicalVersionId}
+                    title="Identity"
+                  />
                 )}
                 {l && (
                   <WorldMedia
@@ -617,6 +551,7 @@ export function WorldWorkspace() {
               </div>
             )}
           </div>
+          {c && <CharacterLooks characterId={id} projectId={projectId} />}
           {inspector}
         </div>
       ) : (
@@ -697,7 +632,12 @@ export function WorldWorkspace() {
                           <CardIcon size={32} />
                         )}
                         <span>
-                          {asset && !asset.missing ? "Still" : "Draft"}
+                          {item.kind === "character" &&
+                          d.characters[item.id]?.approved
+                            ? "Approved"
+                            : asset && !asset.missing
+                              ? "Reference"
+                              : "Draft"}
                         </span>
                       </div>
                       <div className="st-world-card-copy">
@@ -726,6 +666,35 @@ export function WorldWorkspace() {
                 );
               })}
             </div>
+            {filter === "character" && (
+              <section className="ds-world-resources">
+                <h2>Production references</h2>
+                <p className="ds-muted">
+                  Shared places and props for consistent scenes.
+                </p>
+                <div>
+                  {elements
+                    .filter(
+                      (item) => item.kind === "place" || item.kind === "prop",
+                    )
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        className="ds-world-reference"
+                        onClick={() => open(item)}
+                      >
+                        {item.assetId && d.assets[item.assetId]?.url && (
+                          <img src={d.assets[item.assetId].url} alt="" />
+                        )}
+                        <span>
+                          <b>{item.name}</b>
+                          <small>{item.description}</small>
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              </section>
+            )}
             {!visible.length && (
               <div className="st-home-empty">
                 <category.icon size={28} />

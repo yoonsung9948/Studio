@@ -49,20 +49,19 @@ describe("public website and installed app entry", () => {
     );
   });
 
-  it("lets visitors explore storyboard scenes before signing in", () => {
+  it("lets visitors explore frames and workflow stages before signing in", () => {
     visit();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Preview the discovery" }),
+    fireEvent.click(screen.getByRole("button", { name: "Preview frame 2" }));
+    expect(
+      screen.getByRole("button", { name: "Preview frame 2" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByAltText("Starting frame 02 preview")).toHaveAttribute(
+      "src",
+      "/media/director-desk/reunion.png",
     );
     expect(
-      screen.getByRole("button", { name: "Preview the discovery" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("heading", { name: "The discovery" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByAltText("Illustrated storyboard for the discovery"),
-    ).toHaveAttribute("src", "/media/discovery.svg");
+      screen.getByRole("button", { name: "2 Starting frame" }),
+    ).toHaveAttribute("aria-current", "step");
     expect(useAccount.getState().signedIn).toBe(false);
   });
 

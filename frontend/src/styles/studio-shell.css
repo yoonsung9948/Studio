@@ -1,0 +1,390 @@
+/* Shared chrome. All studio routes use the same shell and design tokens. */
+.studio-shell.studio-layout {
+  --ph-bg: var(--bg);
+  --ph-panel: var(--surface);
+  --ph-border: var(--border);
+  --ph-text: var(--text);
+  --ph-muted: var(--muted);
+  --ph-amber: var(--accent);
+  --nav-width: 180px;
+  --header-height: 48px;
+  display: grid;
+  grid-template-columns: var(--nav-width) minmax(0, 1fr);
+  grid-template-rows: var(--header-height) minmax(0, 1fr);
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.studio-layout .st-app-body {
+  display: contents;
+}
+.studio-layout .st-topbar {
+  grid-column: 1/-1;
+  grid-row: 1;
+  display: flex;
+  height: var(--header-height);
+  min-height: var(--header-height);
+  padding: 0 20px 0 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--sidebar);
+  gap: 22px;
+}
+.studio-header-brand {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 24px;
+  flex-shrink: 0;
+}
+.studio-app-mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 32px;
+  align-self: center;
+  border-right: 1px solid var(--border);
+}
+.studio-app-mark .dotori-mark {
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+}
+.dotori-mark circle {
+  fill: var(--accent);
+}
+.studio-header-brand .dotori-wordmark {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.65px;
+  white-space: nowrap;
+}
+.studio-header-label {
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.studio-header-context {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--muted);
+}
+.studio-header-context > a {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-header-context > a:hover {
+  color: var(--text);
+}
+.studio-layout .st-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.studio-notifications {
+  position: relative;
+  padding: 0;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  height: 32px;
+}
+.studio-notifications i {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  background: var(--accent);
+  border: 2px solid var(--sidebar);
+  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+}
+.studio-layout .st-topbar .st-account-avatar {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  object-position: center 35%;
+  border-radius: 50%;
+}
+.studio-layout .st-topbar [aria-label="Account"] {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+.studio-sidebar {
+  grid-row: 2;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  padding: 14px 0 16px;
+  min-height: 0;
+}
+.studio-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.studio-sidebar button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  border: 0;
+  border-left: 4px solid transparent;
+  padding: 0 19px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  width: 100%;
+}
+.studio-sidebar button svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+.studio-sidebar button:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.studio-sidebar button[aria-current="page"] {
+  border-left-color: var(--accent);
+  color: var(--text);
+  background: var(--raised);
+}
+.studio-sidebar button[aria-current="page"] svg {
+  color: var(--accent);
+}
+.studio-sidebar .studio-sidebar-bottom {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  gap: 0;
+}
+.studio-layout .st-app-content {
+  grid-row: 2;
+  grid-column: 2;
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+  outline: none;
+}
+.studio-layout.is-projects-home .st-app-content {
+  overflow: auto;
+}
+.studio-layout .st-recovery {
+  position: fixed;
+  top: calc(var(--header-height) + 8px);
+  right: 20px;
+  z-index: 25;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.studio-layout .st-activity:not(.is-open) {
+  display: none;
+}
+.studio-layout .st-activity.is-open {
+  position: fixed;
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(420px, calc(100vw - var(--nav-width)));
+  height: auto;
+  max-height: none;
+  z-index: 30;
+  background: var(--surface);
+  border: 0;
+  border-left: 1px solid var(--border);
+  box-shadow: -20px 0 70px #0006;
+  display: flex;
+  flex-direction: column;
+}
+.studio-layout .st-activity-toggle {
+  min-height: 64px;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+}
+.studio-layout .st-activity-toggle > span:first-of-type {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+  margin-right: auto;
+}
+.studio-layout .st-activity-toggle > small {
+  font-size: 22px;
+}
+.studio-layout .st-activity-jobs {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 0 20px;
+  max-height: none;
+  height: auto;
+  flex: 1;
+}
+.studio-layout .st-activity-jobs > div {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  min-height: 110px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.studio-layout .st-activity-jobs > div > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  flex-basis: calc(100% - 25px);
+  font-weight: 550;
+}
+.studio-layout .st-activity-jobs small {
+  color: var(--muted);
+}
+.studio-layout .st-toast {
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 60;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  max-width: calc(100vw - 32px);
+  overflow-wrap: anywhere;
+}
+.ph-project-picker {
+  display: grid;
+  gap: 10px;
+}
+@media (max-width: 1279px) {
+  .studio-shell.studio-layout {
+    --nav-width: 64px;
+  }
+  .studio-sidebar button {
+    padding-left: 18px;
+    gap: 0;
+  }
+  .studio-sidebar button span {
+    display: none;
+  }
+  .studio-header-context .studio-header-episode,
+  .studio-context-divider {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .studio-header-context {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .studio-shell.studio-layout {
+    --nav-width: 52px;
+    --header-height: 42px;
+  }
+  .studio-header-brand {
+    gap: 12px;
+  }
+  .studio-app-mark {
+    width: 52px;
+  }
+  .studio-app-mark .dotori-mark {
+    width: 27px;
+    height: 27px;
+  }
+  .studio-header-brand .dotori-wordmark {
+    font-size: 18px;
+  }
+  .studio-header-label {
+    display: none;
+  }
+  .studio-layout .st-topbar {
+    gap: 10px;
+    padding-right: 12px;
+  }
+  .studio-layout .st-topbar-actions {
+    gap: 12px;
+  }
+  .studio-sidebar button {
+    padding-left: 12px;
+    min-height: 48px;
+  }
+  .studio-notifications {
+    border: 0;
+    padding: 0;
+  }
+  .studio-notifications i {
+    right: -2px;
+  }
+}
+@media (max-width: 470px) {
+  .studio-notifications {
+    display: none;
+  }
+  .studio-header-brand .dotori-wordmark {
+    font-size: 15px;
+  }
+  .studio-layout .st-topbar-actions {
+    gap: 8px;
+  }
+}
+
+/* Fast, continuous transitions between the project sidebar and the outer navigation. */
+.studio-shell.studio-layout {
+  transition: grid-template-columns 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-shell.studio-layout {
+    transition: none;
+  }
+}
+
+.studio-layout .st-topbar .studio-credit-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.studio-layout .st-topbar .studio-credit-balance:hover {
+  border-color: var(--accent);
+  background: var(--raised);
+}
+@media (max-width: 650px) {
+  .studio-layout .st-topbar .studio-credit-balance {
+    padding: 7px 8px;
+    gap: 5px;
+    font-size: 12px;
+  }
+}

@@ -1,3 +1,5 @@
+import { backendWorkspaceSchema } from "./interpretation";
+import { episodeCutSchema } from "./cut-schema";
 import {
   studioSchema,
   directionSchema,
@@ -17,7 +19,10 @@ export const episodeForm = z.object({
 const id = z.string();
 const map = <T extends z.ZodType>(v: T) => z.record(id, v);
 const project = z.object({
+  format: z.string().max(100).optional(),
+  archived: z.boolean().optional(),
   unfiled: z.boolean().optional(),
+  assetLibrary: z.boolean().optional(),
   strictApprovals: z.boolean().optional(),
   worldElements: z
     .array(
@@ -27,6 +32,10 @@ const project = z.object({
         assetId: z.string().optional(),
         name: z.string(),
         description: z.string(),
+        revision: z.number().int().positive().optional(),
+        primaryVersionId: id.optional(),
+        savedViewIds: z.record(id, id).optional(),
+        sourceAssetId: id.optional(),
       }),
     )
     .optional(),
@@ -41,6 +50,27 @@ const project = z.object({
   updatedAt: z.number().optional(),
 });
 const episode = z.object({
+  locationIds: z.array(id).optional(),
+  propIds: z.array(id).optional(),
+  cut: episodeCutSchema.optional(),
+  characterIds: z.array(id).optional(),
+  mediaAssetIds: z.array(id).optional(),
+  cutReview: z
+    .object({
+      approvedSignature: z.string().optional(),
+      notes: z.array(
+        z.object({
+          id,
+          text: z.string().max(2000),
+          frame: z.number().int().nonnegative(),
+          resolved: z.boolean(),
+          shotId: id.optional(),
+          version: z.number(),
+          createdAt: z.number(),
+        }),
+      ),
+    })
+    .optional(),
   creationKind: z.enum(["episode", "scene", "shot"]).optional(),
   archived: z.boolean().optional(),
   style: z.string().optional(),
@@ -62,6 +92,8 @@ const episode = z.object({
   timelineVersion: z.number(),
 });
 const scene = z.object({
+  screenplay: z.string().max(10000).optional(),
+  archived: z.boolean().optional(),
   planRevision: z.number().int().positive().optional(),
   planApprovedRevision: z.number().int().positive().optional(),
   sourceScriptRevision: z.number().int().positive().optional(),
@@ -73,6 +105,7 @@ const scene = z.object({
       z.object({
         revision: z.number(),
         scriptRevision: z.number(),
+        screenplay: z.string().optional(),
         title: id,
         description: id,
         dialogue: id,
@@ -95,6 +128,8 @@ const scene = z.object({
   cover: id,
 });
 const shot = z.object({
+  volume: z.number().min(0).max(1).optional(),
+  archived: z.boolean().optional(),
   discardedTakeIds: z.array(z.string()).optional(),
   locked: z.boolean().optional(),
   movement: z.string().optional(),
@@ -121,6 +156,11 @@ const shot = z.object({
   requestedOperation: z.enum(["image", "video"]).optional(),
 });
 const take = z.object({
+  producerJobId: z.string().optional(),
+  favorite: z.boolean().optional(),
+  review: z
+    .object({ note: z.string().max(2000), checks: z.array(z.string()) })
+    .optional(),
   id,
   shotId: id,
   kind: z.enum(["image", "video"]),
@@ -134,6 +174,8 @@ const take = z.object({
   inputs: generationInputSchema.optional(),
 });
 const asset = z.object({
+  storedBlob: z.boolean().optional(),
+  serverAssetId: z.string().optional(),
   archived: z.boolean().optional(),
   id,
   projectId: id,
@@ -157,6 +199,7 @@ const job = z.object({
     "reference",
     "look",
     "location",
+    "prop",
   ]),
   state: z.enum([
     "queued",
@@ -180,7 +223,9 @@ const job = z.object({
   sourceIdentityVersionId: id.optional(),
   sourceLookVersionId: id.optional(),
   specification: id.optional(),
+  viewType: id.optional(),
   outputVersionIds: z.array(id).optional(),
+  outputCount: z.number().int().min(1).max(4).optional(),
   simulateFailure: z.boolean().optional(),
 });
 const scope = z.object({
@@ -197,6 +242,7 @@ const scope = z.object({
   setup: z.boolean().optional(),
 });
 export const dataSchema = z.object({
+  backend: backendWorkspaceSchema.optional(),
   projects: map(project),
   episodes: map(episode),
   scenes: map(scene),
@@ -250,6 +296,7 @@ export const dataSchema = z.object({
   ),
   exports: map(
     z.object({
+      outputAssetId: id.optional(),
       id,
       episodeId: id,
       timelineVersion: z.number(),
@@ -264,6 +311,7 @@ export const dataSchema = z.object({
   ),
   characters: map(
     z.object({
+      sourceCharacterId: id.optional(),
       id,
       projectId: id,
       name: id,
@@ -284,9 +332,18 @@ export const dataSchema = z.object({
   studio: studioSchema,
 });
 export const uiSchema = z.object({
-  density: z.enum(["comfortable", "compact"]).optional(),
+  autosave: z.boolean().optional(),
+  density: z.enum(["comfortable", "compact", "spacious"]).optional(),
+  reducedMotion: z.boolean().optional(),
+  notifications: z
+    .object({
+      completed: z.boolean(),
+      failed: z.boolean(),
+      review: z.boolean(),
+    })
+    .optional(),
   inspectorAdvanced: z.boolean().optional(),
-  theme: z.enum(["dark", "light"]),
+  theme: z.enum(["dark", "light", "system"]),
   collapsed: z.boolean(),
   aiOpen: z.boolean(),
   layouts: map(map(z.number())),

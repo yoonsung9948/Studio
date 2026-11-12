@@ -7,15 +7,13 @@ import { useSelection, useStudio } from "../studio/selection";
 beforeEach(() => {
   useStore.getState().reset();
   useSelection.getState().replace([]);
-  useStudio
-    .getState()
-    .set({
-      navigation: false,
-      activity: false,
-      settings: false,
-      account: false,
-      palette: false,
-    });
+  useStudio.getState().set({
+    navigation: false,
+    activity: false,
+    settings: false,
+    account: false,
+    palette: false,
+  });
 });
 const mount = (url = "/projects/midnight/world") =>
   render(
@@ -99,4 +97,68 @@ it("keeps legacy character links opening the same editing sheet", () => {
   expect(
     screen.getByRole("article", { name: "Character Maya Chen" }),
   ).toBeInTheDocument();
+});
+
+it("opens look cards and submits a look generation without changing the approved identity", () => {
+  mount("/projects/midnight/world?kind=character&id=maya");
+  const looks = screen.getByRole("region", { name: "Character looks" });
+  expect(
+    screen.queryByRole("heading", { name: "Angles" }),
+  ).not.toBeInTheDocument();
+  const card = within(looks).getByRole("article", {
+    name: "Look Summer Casual",
+  });
+  expect(within(card).getByText("Front portrait")).toBeInTheDocument();
+  fireEvent.click(card);
+  expect(card).toHaveClass("is-selected");
+  expect(screen.getByLabelText("Appearance")).toBeInTheDocument();
+  fireEvent.doubleClick(card);
+  expect(
+    screen.getByLabelText("Look generation workspace"),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Looks" }),
+  ).not.toBeInTheDocument();
+  const prompt = screen.getByLabelText("Look prompt");
+  const jobs = Object.keys(useStore.getState().data.jobs);
+  const credits = useStore.getState().data.credits;
+  fireEvent.change(prompt, {
+    target: { value: "A linen jacket in warm light" },
+  });
+  expect(prompt).toHaveValue("A linen jacket in warm light");
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  const data = useStore.getState().data;
+  expect(Object.keys(data.jobs)).toHaveLength(jobs.length + 1);
+  expect(Object.values(data.jobs).at(-1)?.operation).toBe("look");
+  expect(
+    Object.values(data.studio.looks).find(
+      (look) => look.name === "Summer Casual",
+    )?.description,
+  ).toBe("A linen jacket in warm light");
+  expect(data.credits).toBeLessThan(credits);
+  fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+  expect(
+    screen.getByRole("article", { name: "Look Summer Casual" }),
+  ).toBeInTheDocument();
+});
+it("adds an editable draft look card without an explicit angle card", () => {
+  mount("/projects/midnight/world?kind=character&id=maya");
+  fireEvent.click(screen.getByRole("button", { name: "Add Look" }));
+  const card = screen.getByRole("article", { name: "Look Untitled Look" });
+  expect(within(card).getByText("Front portrait")).toBeInTheDocument();
+  expect(within(card).getByText("Draft")).toBeInTheDocument();
+  const name = within(card).getByLabelText("Look name Untitled Look");
+  fireEvent.change(name, { target: { value: "Travel" } });
+  fireEvent.blur(name);
+  expect(
+    screen.getByRole("article", { name: "Look Travel" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Add angle" }),
+  ).not.toBeInTheDocument();
+});
+it("does not open another character's look through a mismatched direct link", () => {
+  mount("/projects/midnight/world/characters/leo/looks/maya-look-0");
+  expect(screen.getByText("Look unavailable")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Look prompt")).not.toBeInTheDocument();
 });

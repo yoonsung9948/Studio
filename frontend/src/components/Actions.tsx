@@ -3,6 +3,7 @@ import {
   studioCost,
   targetInfo,
 } from "../domain/studio-commands";
+import { generationInputs } from "../domain/generation-inputs";
 import { targetBusy } from "../domain/studio-selectors";
 import { GenerationDialog } from "../features/generation/GenerationDialog";
 import { prepareVideoGeneration } from "../domain/video-workflow";
@@ -24,7 +25,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { useStore } from "../stores/store";
+import { currentWorkspaceEpoch, useStore } from "../stores/store";
 import { exportWarnings, shotsOfEpisode } from "../domain/selectors";
 import { approveTake } from "../domain/commands";
 import { exportService, downloadManifest } from "../services/mock";
@@ -428,6 +429,16 @@ function ModalBody({
       </>
     );
   const warnings = exportWarnings(d, m.episodeId);
+  const firstShot = shotsOfEpisode(d, m.episodeId)[0];
+  const aspect = firstShot
+    ? generationInputs(d, firstShot.sceneId, firstShot.id).aspectRatio
+    : "16:9";
+  const dimensions =
+    aspect === "16:9"
+      ? "1920 × 1080"
+      : aspect === "9:16"
+        ? "1080 × 1920"
+        : "1080 × 1080";
   return (
     <>
       <DialogTitle>
@@ -446,7 +457,7 @@ function ModalBody({
           </select>
         </label>
         <p className="muted">
-          9:16 · 1080 × 1920 · 30 fps · workflow labels only
+          {aspect} · {dimensions} · 30 fps · workflow labels only
         </p>
         <label>
           Title
@@ -498,11 +509,13 @@ function ModalBody({
           onClick={async () => {
             setBusy(true);
             try {
+              const epoch = currentWorkspaceEpoch();
               const record = await exportService.create(
                 structuredClone(d),
                 m.episodeId,
                 { title, preset, captions, description, draft },
               );
+              if (epoch !== currentWorkspaceEpoch()) return;
               mutate((d) => {
                 d.exports[record.id] = record;
               });

@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"nori/studio/server/internal/platform/blob"
 	"time"
 
 	"nori/studio/server/internal/platform/queue"
@@ -15,7 +16,7 @@ import (
 // Simple operations (one call, one result) should use Define instead of
 // implementing Step directly.
 type Operation interface {
-	// Name is the operation clients submit, e.g. "interpret_brief".
+	// Name is the operation clients submit, e.g. "interpret_request".
 	Name() string
 	// InputVersion is stored with each job; stored input with another version is rejected.
 	InputVersion() int
@@ -24,8 +25,6 @@ type Operation interface {
 	// Canonicalize validates client input and returns its canonical JSON, so equal
 	// requests compare equal for idempotency. Error messages are shown to clients.
 	Canonicalize(input json.RawMessage) (json.RawMessage, error)
-	// Provider names who runs the operation, recorded on each attempt when it starts.
-	Provider() (provider, model string)
 	// Step runs the current step and says what happens next. Return a *RunError to
 	// control the failure code and whether the attempt is retried; other errors are retried.
 	Step(ctx context.Context, run Run) (Outcome, error)
@@ -36,7 +35,7 @@ const (
 	DefaultStepTimeout = 30 * time.Second
 	// MaxStepTimeout caps any step. It stays below queue.RescueAfter so River
 	// never mistakes a running step for a crashed one.
-	MaxStepTimeout = 100 * time.Second
+	MaxStepTimeout = 3 * time.Minute
 )
 
 // StepTimeouter is implemented by operations whose steps need a different time
@@ -61,6 +60,8 @@ type Run struct {
 	// JobID is stable across steps, retries and queues; use it as a provider's
 	// idempotency key so a repeated step does not start (and pay for) new work.
 	JobID string
+	// OwnerID is loaded from the persisted job, never from River arguments.
+	OwnerID string
 	// Attempt counts tries of the whole job; resuming after Wait or Next keeps it.
 	Attempt int
 	Input   json.RawMessage
@@ -75,7 +76,7 @@ type Outcome interface{ isOutcome() }
 
 // Done finishes the job and publishes its artifacts.
 type Done struct {
-	Provider  string // who actually did the work, if different from Operation.Provider
+	Provider  string // optional provider used for this result
 	Model     string
 	Artifacts []ArtifactDraft
 }
@@ -100,8 +101,28 @@ func (Done) isOutcome() {}
 func (Wait) isOutcome() {}
 func (Next) isOutcome() {}
 
+// AssetReference identifies media used by an operation.
+type AssetReference struct {
+	ID   string
+	Kind string
+}
+
+// AssetReferencer declares owned media that must exist before work is queued.
+type AssetReferencer interface {
+	ReferencedAssets(json.RawMessage) ([]AssetReference, error)
+}
+
+type MediaDraft struct {
+	SourceAssetID string
+	Kind          string
+	FileKey       string
+	ContentType   string
+	SizeBytes     int64
+}
+
 // ArtifactDraft is an artifact before it is stored.
 type ArtifactDraft struct {
+	Media         *MediaDraft
 	Kind          string
 	SchemaVersion int
 	Content       json.RawMessage
@@ -123,6 +144,12 @@ func checkOutcome(o Outcome) string {
 	switch o := o.(type) {
 	case Done:
 		for _, a := range o.Artifacts {
+			if a.Media != nil {
+				m := a.Media
+				if (m.Kind != "image" && m.Kind != "video" && m.Kind != "audio") || blob.CheckKey(m.FileKey) != nil || m.ContentType == "" || m.SizeBytes < 0 {
+					return "Operation returned invalid media."
+				}
+			}
 			if a.Kind == "" || a.SchemaVersion < 1 || !json.Valid(a.Content) {
 				return "Operation returned an invalid artifact."
 			}
@@ -139,4 +166,9 @@ func checkOutcome(o Outcome) string {
 		return "Operation returned no outcome."
 	}
 	return ""
+}
+
+// ProviderReporter optionally identifies the AI service used by an operation.
+type ProviderReporter interface {
+	Provider() (provider, model string)
 }
